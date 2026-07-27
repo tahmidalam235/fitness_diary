@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'core/di/injection.dart';
 import 'core/routes/app_router.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await setupInjection();
+
   runApp(const FitnessDiaryApp());
 }
 
@@ -14,9 +19,7 @@ class FitnessDiaryApp extends StatelessWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: appRouter,
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
+      theme: ThemeData(useMaterial3: true),
     );
   }
 }

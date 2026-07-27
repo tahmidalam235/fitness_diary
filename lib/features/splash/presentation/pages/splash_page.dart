@@ -25,31 +25,20 @@ class _SplashPageState extends State<SplashPage>
       duration: const Duration(milliseconds: 1200),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
     _scaleAnimation = Tween<double>(
       begin: .8,
       end: 1,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeOutBack,
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
-    Timer(
-      const Duration(seconds: 2),
-          () {
-        if (mounted) {
-          context.go('/home');
-        }
-      },
-    );
+    Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        context.go('/today');
+      }
+    });
   }
 
   @override
@@ -71,10 +60,7 @@ class _SplashPageState extends State<SplashPage>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.fitness_center_rounded,
-                  size: 90,
-                ),
+                const Icon(Icons.fitness_center_rounded, size: 90),
                 const SizedBox(height: 24),
                 Text(
                   'Fitness Diary',
@@ -83,10 +69,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Track • Train • Progress',
-                  style: textTheme.bodyMedium,
-                ),
+                Text('Track • Train • Progress', style: textTheme.bodyMedium),
                 const SizedBox(height: 40),
                 const CircularProgressIndicator(),
               ],

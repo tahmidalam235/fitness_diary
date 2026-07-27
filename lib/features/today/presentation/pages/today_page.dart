@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:fitness_diary/shared/widgets/app_drawer.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+import '../../../../shared/widgets/app_drawer.dart';
+
+class TodayPage extends StatelessWidget {
+  const TodayPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Today'),
-      ),
+      appBar: AppBar(title: const Text('Today')),
       drawer: const AppDrawer(),
       body: Center(
         child: Padding(
@@ -30,15 +29,13 @@ class HomePage extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Select a session to start tracking your workout.',
-                textAlign: TextAlign.center,
+                'Select a session to start your workout.',
                 style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
               FilledButton.icon(
-                onPressed: () {
-                  // TODO: Navigate to Session List
-                },
+                onPressed: () {},
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: const Text('Select Session'),
               ),
