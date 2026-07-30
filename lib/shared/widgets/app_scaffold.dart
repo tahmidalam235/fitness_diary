@@ -24,6 +24,7 @@ class AppScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.bottomNavigationBar,
     this.useNavigationRail = false,
+    this.showBackButton = false,
     super.key,
   });
 
@@ -37,11 +38,20 @@ class AppScaffold extends StatelessWidget {
   /// a persistent [NavigationRail] (medium/expanded).
   final bool useNavigationRail;
 
+  /// When true, the AppBar always shows a back-arrow leading widget,
+  /// even on top-level routes where `context.canPop()` is false. The
+  /// arrow pops the navigator when possible; on a root route it is a
+  /// no-op. Opt in for pages where the user is expected to be able to
+  /// return to the previous screen (e.g. with a deep link as the entry
+  /// point).
+  final bool showBackButton;
+
   /// A prominent, always-tappable back arrow used as the AppBar's
   /// leading widget on every pushed route. Renders nothing on initial
-  /// routes so top-level tabs don't show a dead arrow.
+  /// routes so top-level tabs don't show a dead arrow — unless the
+  /// page explicitly opts in via [showBackButton].
   Widget? _buildLeading(BuildContext context) {
-    if (!context.canPop()) return null;
+    if (!context.canPop() && !showBackButton) return null;
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Material(
@@ -50,7 +60,12 @@ class AppScaffold extends StatelessWidget {
         child: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: 'Back',
-          onPressed: () => context.pop(),
+          onPressed: () {
+            final navigator = Navigator.of(context);
+            if (navigator.canPop()) {
+              navigator.pop();
+            }
+          },
         ),
       ),
     );

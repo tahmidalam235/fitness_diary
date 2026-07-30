@@ -62,6 +62,7 @@ class CalendarPage extends StatelessWidget {
       child: AppScaffold(
         title: l10n.calendarTitle,
         useNavigationRail: true,
+        showBackButton: true,
         body: BlocBuilder<CalendarBloc, CalendarState>(
           builder: (context, state) {
             if (state is CalendarInitial || state is CalendarLoading) {

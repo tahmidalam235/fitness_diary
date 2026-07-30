@@ -73,6 +73,7 @@ class _TodayPageState extends State<TodayPage> {
       child: AppScaffold(
         title: l10n.navToday,
         useNavigationRail: true,
+        showBackButton: true,
         body: BlocBuilder<SessionBloc, SessionState>(
           builder: (context, state) {
             if (state is SessionLoading) {
