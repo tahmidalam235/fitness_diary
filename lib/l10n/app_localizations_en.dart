@@ -317,6 +317,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Complete a session to see it appear on your calendar.';
 
   @override
+  String get calendarPickerTitle => 'Pick a month';
+
+  @override
+  String get calendarPickerYearPrev => 'Previous year';
+
+  @override
+  String get calendarPickerYearNext => 'Next year';
+
+  @override
+  String get calendarPickerCancel => 'Cancel';
+
+  @override
+  String get calendarPickerConfirm => 'Go';
+
+  @override
   String get dailyDetailsTitle => 'Daily Details';
 
   @override

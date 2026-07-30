@@ -152,6 +152,11 @@
   "calendarLegendCompleted": "Workout completed",
   "calendarEmptyTitle": "No workouts yet",
   "calendarEmptyMessage": "Complete a session to see it appear on your calendar.",
+  "calendarPickerTitle": "Pick a month",
+  "calendarPickerYearPrev": "Previous year",
+  "calendarPickerYearNext": "Next year",
+  "calendarPickerCancel": "Cancel",
+  "calendarPickerConfirm": "Go",
 
   "dailyDetailsTitle": "Daily Details",
   "dailyDetailsDateLabel": "Date: {date}",

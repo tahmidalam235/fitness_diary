@@ -646,6 +646,36 @@ abstract class AppLocalizations {
   /// **'Complete a session to see it appear on your calendar.'**
   String get calendarEmptyMessage;
 
+  /// No description provided for @calendarPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a month'**
+  String get calendarPickerTitle;
+
+  /// No description provided for @calendarPickerYearPrev.
+  ///
+  /// In en, this message translates to:
+  /// **'Previous year'**
+  String get calendarPickerYearPrev;
+
+  /// No description provided for @calendarPickerYearNext.
+  ///
+  /// In en, this message translates to:
+  /// **'Next year'**
+  String get calendarPickerYearNext;
+
+  /// No description provided for @calendarPickerCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get calendarPickerCancel;
+
+  /// No description provided for @calendarPickerConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Go'**
+  String get calendarPickerConfirm;
+
   /// No description provided for @dailyDetailsTitle.
   ///
   /// In en, this message translates to:
