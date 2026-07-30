@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -17,27 +16,24 @@ import '../bloc/calendar_state.dart';
 import '../widgets/month_section.dart';
 import '../widgets/month_year_picker.dart';
 
-/// Total number of months rendered by the all-months calendar view.
-///
-/// 20 years × 12 = 240. Spans today-10y through today+10y (inclusive).
-const int _kTotalMonths = 240;
-
-/// First-of-month for index [_kTotalMonths - 1] is `today + 10 years`,
-/// so the latest year available is `today.year + 10`.
-int _maxYear() => DateTime.now().year + 10;
+/// First-of-month for the picker — bounds match the all-months version
+/// (-10y / +10y from today) so users can still browse any month.
 int _minYear() => DateTime.now().year - 10;
+int _maxYear() => DateTime.now().year + 10;
 
-/// All-months Calendar page.
+/// Single-month Calendar page.
 ///
-/// - Renders a vertical scroll of [_kTotalMonths] months (-10y to +10y).
-/// - Each row is a [MonthSection] with its own header + 7×6 grid.
-/// - Tap a day → `/calendar/day/yyyy-MM-dd`.
-/// - Opens scrolled to today's month via a per-month [GlobalKey] and
-///   [Scrollable.ensureVisible] scheduled in a post-frame callback.
-/// - Sticky month-year bar above the scroll shows the currently
-///   visible month; tapping it opens [MonthYearPicker] and scrolls
-///   to the picked month.
+/// - Renders the currently visible [MonthSection] only (no scroll,
+///   no chevrons).
+/// - A sticky tappable month-year bar above the grid opens the
+///   [MonthYearPicker]; picking a month updates the visible month
+///   in place.
 /// - The "Today" FAB jumps back to today's month.
+/// - Tap a day → `/calendar/day/yyyy-MM-dd`.
+///
+/// Note: the bloc still subscribes to the full 20-year window so the
+/// workout-completion dots on whatever month is visible reflect the
+/// full history without any resubscription.
 class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
 
@@ -46,116 +42,29 @@ class CalendarPage extends StatefulWidget {
 }
 
 class _CalendarPageState extends State<CalendarPage> {
-  late final ScrollController _controller;
-  late final List<DateTime> _months;
-  late final int _todayIndex;
-
-  /// One [GlobalKey] per month so the page can scroll to a specific
-  /// month via [Scrollable.ensureVisible] without needing to compute
-  /// pixel offsets (the items have varying heights).
-  late final List<GlobalKey> _monthKeys;
-
-  /// Index of the month currently at the top of the viewport. Drives
-  /// the sticky header label. Updates on scroll-end.
-  int _visibleIndex = 0;
+  late DateTime _visibleMonth;
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    _months = List<DateTime>.generate(
-      _kTotalMonths,
-      (i) => DateTime(now.year - 10 + (i ~/ 12), 1 + (i % 12), 1),
-    );
-    _todayIndex = _months.indexWhere(
-      (m) => m.year == now.year && m.month == now.month,
-    );
-    _visibleIndex = _todayIndex >= 0 ? _todayIndex : 0;
-    _monthKeys = List<GlobalKey>.generate(
-      _kTotalMonths,
-      (_) => GlobalKey(),
-    );
-    _controller = ScrollController()..addListener(_onScroll);
-
-    // Defer the jump until after the first frame so the lazy
-    // ListView has actually laid out the target item, then scroll to
-    // it via [Scrollable.ensureVisible].
-    if (_todayIndex >= 0) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        _scrollToIndex(_todayIndex);
-      });
-    }
+    _visibleMonth = DateTime(now.year, now.month, 1);
   }
 
-  @override
-  void dispose() {
-    _controller.removeListener(_onScroll);
-    _controller.dispose();
-    super.dispose();
+  void _jumpToToday() {
+    final now = DateTime.now();
+    setState(() => _visibleMonth = DateTime(now.year, now.month, 1));
   }
-
-  void _onScroll() {
-    if (_controller.position.userScrollDirection == ScrollDirection.idle) {
-      _updateVisibleIndex();
-    }
-  }
-
-  /// Finds the topmost visible month section by inspecting each
-  /// [GlobalKey]'s render-object position. Runs on scroll-end; O(n)
-  /// over 240 items is negligible.
-  void _updateVisibleIndex() {
-    if (!mounted) return;
-    if (!_controller.hasClients) return;
-    final viewportTop = _controller.position.pixels;
-    int best = _visibleIndex;
-    double bestOffset = -1;
-    for (var i = 0; i < _monthKeys.length; i++) {
-      final ctx = _monthKeys[i].currentContext;
-      if (ctx == null) continue;
-      final ro = ctx.findRenderObject();
-      if (ro is! RenderBox || !ro.attached) continue;
-      final renderViewport = RenderAbstractViewport.of(ro);
-      final offset = renderViewport.getOffsetToReveal(ro, 0).offset;
-      if (offset <= viewportTop && offset > bestOffset) {
-        bestOffset = offset;
-        best = i;
-      }
-    }
-    if (best != _visibleIndex) {
-      setState(() => _visibleIndex = best);
-    }
-  }
-
-  void _scrollToIndex(int index) {
-    if (index < 0 || index >= _monthKeys.length) return;
-    final ctx = _monthKeys[index].currentContext;
-    if (ctx == null) return;
-    Scrollable.ensureVisible(
-      ctx,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutCubic,
-      alignment: 0,
-    );
-  }
-
-  void _jumpToToday() => _scrollToIndex(_todayIndex);
 
   Future<void> _pickMonth() async {
     final picked = await MonthYearPicker.show(
       context: context,
-      initial: _months[_visibleIndex],
+      initial: _visibleMonth,
       minYear: _minYear(),
       maxYear: _maxYear(),
     );
-    if (picked == null) return;
-    final target = _months.indexWhere(
-      (m) => m.year == picked.year && m.month == picked.month,
-    );
-    if (target < 0) return;
-    if (!mounted) return;
-    setState(() => _visibleIndex = target);
-    _scrollToIndex(target);
+    if (picked == null || !mounted) return;
+    setState(() => _visibleMonth = picked);
   }
 
   String _formatDayParam(DateTime d) =>
@@ -196,7 +105,7 @@ class _CalendarPageState extends State<CalendarPage> {
                 children: [
                   _MonthYearBar(
                     label: DateFormat.yMMMM(l10n.localeName)
-                        .format(_months[_visibleIndex]),
+                        .format(_visibleMonth),
                     onTap: _pickMonth,
                   ),
                   Padding(
@@ -209,22 +118,17 @@ class _CalendarPageState extends State<CalendarPage> {
                     child: _LegendChip(label: l10n.calendarLegendCompleted),
                   ),
                   Expanded(
-                    child: ListView.builder(
-                      controller: _controller,
-                      itemCount: _months.length,
-                      itemBuilder: (context, index) {
-                        final month = _months[index];
-                        return MonthSection(
-                          key: _monthKeys[index],
-                          month: month,
-                          daysWithLogs: state.daysWithLogs,
-                          workoutsByDay: state.workoutsByDay,
-                          onTapDay: (d) => context.pushNamed(
-                            RouteNames.calendarDay,
-                            pathParameters: {'date': _formatDayParam(d)},
-                          ),
-                        );
-                      },
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
+                      child: MonthSection(
+                        month: _visibleMonth,
+                        daysWithLogs: state.daysWithLogs,
+                        workoutsByDay: state.workoutsByDay,
+                        onTapDay: (d) => context.pushNamed(
+                          RouteNames.calendarDay,
+                          pathParameters: {'date': _formatDayParam(d)},
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -239,7 +143,7 @@ class _CalendarPageState extends State<CalendarPage> {
 }
 
 /// Sticky tappable bar showing the currently visible month. Built
-/// from AppScaffold's body so it sits above the scrollable list.
+/// from AppScaffold's body so it sits above the month grid.
 class _MonthYearBar extends StatelessWidget {
   const _MonthYearBar({required this.label, required this.onTap});
 
