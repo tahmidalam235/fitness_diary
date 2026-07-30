@@ -1,17 +1,23 @@
-import 'package:get_it/get_it.dart';
-
 import '../database/app_database.dart';
-import '../database/daos/session_dao.dart';
-import '../database/daos/workout_dao.dart';
+import 'injection.config.dart';
+import 'service_locator.dart';
 
-final GetIt getIt = GetIt.instance;
+export 'service_locator.dart';
 
+/// Eagerly initializes the dependency injection graph.
+///
+/// Must be awaited from `main()` before `runApp`.
 Future<void> setupInjection() async {
+  // Eager: open the database once so the app is responsive on first frame.
   final database = AppDatabase();
-
   getIt.registerSingleton<AppDatabase>(database);
 
-  getIt.registerLazySingleton<SessionDao>(() => SessionDao(database));
-
-  getIt.registerLazySingleton<WorkoutDao>(() => WorkoutDao(database));
+  // Lazy: register all DAOs, repositories, use cases, and blocs.
+  getIt.registerCore();
+  getIt.registerSessionFeature();
+  getIt.registerWorkoutFeature();
+  getIt.registerWorkoutLogFeature();
+  getIt.registerHistoryFeature();
+  getIt.registerCalendarFeature();
+  getIt.registerTodayFeature();
 }

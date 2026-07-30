@@ -5,30 +5,32 @@ import '../tables/workouts_table.dart';
 
 part 'workout_dao.g.dart';
 
+/// Data-access object for the [Workouts] master catalog.
 @DriftAccessor(tables: [Workouts])
 class WorkoutDao extends DatabaseAccessor<AppDatabase> with _$WorkoutDaoMixin {
   WorkoutDao(super.db);
 
   Future<List<Workout>> getAllWorkouts() {
-    return select(workouts).get();
+    return (select(
+      workouts,
+    )..orderBy([(tbl) => OrderingTerm.asc(tbl.exerciseName)])).get();
   }
 
   Stream<List<Workout>> watchAllWorkouts() {
-    return select(workouts).watch();
+    return (select(
+      workouts,
+    )..orderBy([(tbl) => OrderingTerm.asc(tbl.exerciseName)])).watch();
   }
 
-  Future<List<Workout>> getWorkoutsBySession(int sessionId) {
-    return (select(workouts)
-          ..where((tbl) => tbl.sessionId.equals(sessionId))
-          ..orderBy([(tbl) => OrderingTerm.asc(tbl.exerciseName)]))
-        .get();
+  Future<Workout?> getById(int id) {
+    return (select(
+      workouts,
+    )..where((tbl) => tbl.id.equals(id))).getSingleOrNull();
   }
 
-  Stream<List<Workout>> watchWorkoutsBySession(int sessionId) {
-    return (select(workouts)
-          ..where((tbl) => tbl.sessionId.equals(sessionId))
-          ..orderBy([(tbl) => OrderingTerm.asc(tbl.exerciseName)]))
-        .watch();
+  Future<List<Workout>> getByIds(List<int> ids) {
+    if (ids.isEmpty) return Future.value(const <Workout>[]);
+    return (select(workouts)..where((tbl) => tbl.id.isIn(ids))).get();
   }
 
   Future<int> insertWorkout(WorkoutsCompanion companion) {

@@ -1,0 +1,241 @@
+{
+  "@@locale": "en",
+
+  "appTitle": "Fitness Diary",
+  "@appTitle": {
+    "description": "App title shown in the system task switcher and splash."
+  },
+
+  "appTagline": "Track • Train • Progress",
+  "@appTagline": {
+    "description": "Short marketing line shown on the splash screen."
+  },
+
+  "navToday": "Today",
+  "navSessions": "Sessions",
+  "navWorkouts": "Workout Library",
+  "navCalendar": "Calendar",
+  "navDashboard": "Dashboard",
+  "navSettings": "Settings",
+
+  "commonRetry": "Retry",
+  "commonCancel": "Cancel",
+  "commonConfirm": "Confirm",
+  "commonDelete": "Delete",
+  "commonEdit": "Edit",
+  "commonSave": "Save",
+  "commonLoading": "Loading…",
+  "commonErrorTitle": "Something went wrong",
+  "commonErrorUnexpected": "An unexpected error occurred. Please try again.",
+
+  "todayEmptyTitle": "No workout started today",
+  "todayEmptyMessage": "Select a session to start your workout.",
+  "todayEmptyAction": "Select Session",
+  "todaySelectedLabel": "Selected",
+  "todayPickedSessionHeader": "Today's session",
+  "todayPickAnother": "Change session",
+
+  "sessionsTitle": "Sessions",
+  "sessionsEmptyTitle": "No sessions yet",
+  "sessionsEmptyMessage": "Create your first workout session to get started.",
+  "sessionsEmptyAction": "Create Session",
+  "sessionsFabNew": "New Session",
+  "sessionsSearchHint": "Search sessions",
+  "sessionsSearchClear": "Clear search",
+  "sessionsNoMatchesTitle": "No sessions match \"{query}\"",
+  "@sessionsNoMatchesTitle": {
+    "description": "Title shown when the search query has no matches.",
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionsNoMatchesMessage": "Try a different search term or create a new session.",
+  "sessionsWorkoutCount": "{count, plural, =0{No exercises} =1{1 exercise} other{{count} exercises}}",
+  "@sessionsWorkoutCount": {
+    "description": "Pluralized exercise count shown on session cards.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "sessionFormTitleNew": "Create Session",
+  "sessionFormTitleEdit": "Edit Session",
+  "sessionFieldName": "Session name",
+  "sessionFieldNameHint": "e.g. Push Day",
+  "sessionFieldNameRequired": "Please enter a session name",
+  "sessionFieldNameTooShort": "Name must be at least 2 characters",
+  "sessionFieldNameTooLong": "Name must be at most 60 characters",
+  "sessionFieldDescription": "Description",
+  "sessionFieldDescriptionHint": "Optional notes about this session",
+  "sessionSaveSuccess": "Session saved",
+
+  "sessionDeleteTitle": "Delete session?",
+  "sessionDeleteMessage": "Are you sure you want to delete \"{name}\"? This action cannot be undone.",
+  "@sessionDeleteMessage": {
+    "description": "Confirmation message shown before deleting a session.",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+
+  "sessionDetailsTitle": "Session Details",
+  "sessionDetailsEditAction": "Edit Session",
+  "sessionDetailsDeleteAction": "Delete Session",
+  "sessionDetailsCreatedAt": "Created {date}",
+  "@sessionDetailsCreatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDetailsUpdatedAt": "Updated {date}",
+  "@sessionDetailsUpdatedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "sessionDetailsPlaceholder": "Exercise management will arrive in the next update.",
+  "sessionDetailsLoadError": "Could not load session",
+  "sessionDetailsNotFound": "Session not found",
+
+  "dashboardTitle": "Dashboard",
+  "dashboardComingSoon": "Dashboard insights are coming soon.",
+  "dashboardGreetingMorning": "Good morning",
+  "dashboardGreetingAfternoon": "Good afternoon",
+  "dashboardGreetingEvening": "Good evening",
+  "dashboardGreetingNight": "Good night",
+  "dashboardSubtitle": "Here's where you stand today.",
+  "dashboardKpiSessionsThisWeek": "Sessions this week",
+  "dashboardKpiSessionsThisWeekSub": "Last 7 days",
+  "dashboardKpiTotalWorkouts": "Total workouts logged",
+  "dashboardKpiTotalWorkoutsSub": "Across all sessions",
+  "dashboardKpiSetsLogged": "Sets logged",
+  "dashboardKpiSetsLoggedSub": "All time",
+  "dashboardQuickActionsTitle": "Quick actions",
+  "dashboardActionStartToday": "Start today's workout",
+  "dashboardActionStartTodaySub": "Open Today",
+  "dashboardActionViewCalendar": "Calendar",
+  "dashboardActionViewCalendarSub": "Browse by date",
+  "dashboardActionBrowseSessions": "Sessions",
+  "dashboardActionBrowseSessionsSub": "All your templates",
+  "dashboardRecentTitle": "Recent activity",
+  "dashboardRecentEmpty": "No workouts yet — your first session will appear here.",
+  "dashboardRecentWorkoutCount": "{count, plural, =0{No workouts} =1{1 workout} other{{count} workouts}}",
+  "@dashboardRecentWorkoutCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "dashboardStatSingular": "workout",
+  "dashboardStatPlural": "workouts",
+
+  "calendarTitle": "Calendar",
+  "calendarMonthPrev": "Previous month",
+  "calendarMonthNext": "Next month",
+  "calendarToday": "Today",
+  "calendarWeekdaySun": "Sun",
+  "calendarWeekdayMon": "Mon",
+  "calendarWeekdayTue": "Tue",
+  "calendarWeekdayWed": "Wed",
+  "calendarWeekdayThu": "Thu",
+  "calendarWeekdayFri": "Fri",
+  "calendarWeekdaySat": "Sat",
+  "calendarLegendCompleted": "Workout completed",
+  "calendarEmptyTitle": "No workouts yet",
+  "calendarEmptyMessage": "Complete a session to see it appear on your calendar.",
+
+  "dailyDetailsTitle": "Daily Details",
+  "dailyDetailsDateLabel": "Date: {date}",
+  "@dailyDetailsDateLabel": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "dailyDetailsSessionFallback": "Session #{id}",
+  "@dailyDetailsSessionFallback": {
+    "placeholders": {
+      "id": { "type": "int" }
+    }
+  },
+  "dailyDetailsWorkoutFallback": "Exercise #{id}",
+  "@dailyDetailsWorkoutFallback": {
+    "placeholders": {
+      "id": { "type": "int" }
+    }
+  },
+  "dailyDetailsCompletedSets": "Completed Sets",
+  "dailyDetailsCompletedReps": "Reps",
+  "dailyDetailsWeightUsed": "Weight",
+  "dailyDetailsDuration": "Duration",
+  "dailyDetailsNotes": "Notes",
+  "dailyDetailsEmptyTitle": "No workout completed on this day",
+  "dailyDetailsEmptyMessage": "Pick a different date to see your history.",
+  "dailyDetailsLoadError": "Could not load this day's details",
+  "dailyDetailsInvalidDate": "Invalid date",
+
+  "settingsTitle": "Settings",
+  "settingsComingSoon": "App settings will appear here.",
+
+  "workoutsTitle": "Workout Library",
+  "workoutsComingSoon": "The workout library is coming soon.",
+
+  "workoutAddTitle": "Add Workout",
+  "workoutEditTitle": "Edit Workout",
+  "workoutFieldName": "Exercise name",
+  "workoutFieldNameHint": "e.g. Bench Press",
+  "workoutFieldNameRequired": "Please enter an exercise name",
+  "workoutFieldNameTooShort": "Name must be at least 2 characters",
+  "workoutFieldDefaultSets": "Default sets",
+  "workoutFieldDefaultReps": "Default reps",
+  "workoutFieldDefaultDuration": "Default duration (seconds)",
+  "workoutFieldDefaultWeight": "Default weight",
+  "workoutFieldNotes": "Notes",
+  "workoutFieldNumberRequired": "Required",
+  "workoutFieldNumberTooSmall": "Must be at least {min}",
+  "workoutFieldNumberTooLarge": "Must be at most {max}",
+  "workoutDeleteTitle": "Delete workout?",
+  "workoutDeleteMessage": "Are you sure you want to remove \"{name}\" from this session? This action cannot be undone.",
+  "@workoutDeleteMessage": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "workoutDetailsTapHint": "Tap to track today's sets",
+  "workoutListEmptyTitle": "No workouts yet",
+  "workoutListEmptyMessage": "Add your first exercise to this session.",
+  "workoutListEmptyAction": "Add Workout",
+  "workoutListSetsReps": "{sets} sets × {reps} reps",
+  "@workoutListSetsReps": {
+    "placeholders": {
+      "sets": {"type": "int"},
+      "reps": {"type": "int"}
+    }
+  },
+  "workoutListDuration": "{seconds}s",
+  "@workoutListDuration": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "workoutListWeight": "{weight} kg",
+  "@workoutListWeight": {
+    "placeholders": {
+      "weight": {"type": "String"}
+    }
+  },
+  "workoutActionEdit": "Edit workout",
+  "workoutActionDelete": "Delete workout",
+  "workoutActionReorder": "Reorder",
+
+  "routerErrorTitle": "Page not found",
+  "routerErrorMessage": "The requested page does not exist."
+}
