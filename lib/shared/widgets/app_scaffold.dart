@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/routes/route_paths.dart';
 import '../../core/theme/app_spacing.dart';
 import '../responsive/responsive_builder.dart';
 import '../responsive/screen_size.dart';
 import 'app_drawer.dart';
+
+/// Top-level destinations in the same order they appear in
+/// [AppDrawer]/[AppNavigationRail]. Used by the back-arrow leading
+/// widget so it can navigate to the previous destination when the
+/// navigator stack is empty (i.e. the user reached the current page via
+/// `context.go(...)` rather than `context.push(...)`).
+const List<String> _kDrawerRoutes = [
+  RoutePaths.today,
+  RoutePaths.sessions,
+  RoutePaths.workouts,
+  RoutePaths.calendar,
+  RoutePaths.dashboard,
+  RoutePaths.settings,
+];
 
 /// App-level scaffold that hosts a permanent Navigation Drawer (compact)
 /// or a persistent NavigationRail (medium / expanded) for wider screens.
@@ -60,15 +75,32 @@ class AppScaffold extends StatelessWidget {
         child: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           tooltip: 'Back',
-          onPressed: () {
-            final navigator = Navigator.of(context);
-            if (navigator.canPop()) {
-              navigator.pop();
-            }
-          },
+          onPressed: () => _handleBack(context),
         ),
       ),
     );
+  }
+
+  /// Pop the navigator when there is something on the stack (covers
+  /// pushed child routes such as `/calendar/day/:date`). Otherwise fall
+  /// back to the previous destination in the drawer's route order so
+  /// the back arrow always does something meaningful, even on top-level
+  /// routes reached via `context.go(...)`.
+  void _handleBack(BuildContext context) {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+      return;
+    }
+
+    final currentPath = GoRouterState.of(context).uri.path;
+    final index = _kDrawerRoutes.indexWhere(
+      (route) => currentPath.startsWith(route),
+    );
+    final fallbackIndex = index < 0
+        ? 0
+        : (index - 1 + _kDrawerRoutes.length) % _kDrawerRoutes.length;
+    context.go(_kDrawerRoutes[fallbackIndex]);
   }
 
   @override

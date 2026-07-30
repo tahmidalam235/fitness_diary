@@ -11,61 +11,28 @@ import 'calendar_state.dart';
 
 /// Bloc that owns the calendar grid state.
 ///
-/// Subscribes to [WatchLogsInRange] for the 6-week window around the
-/// visible month and aggregates streamed [WorkoutLog]s into a
-/// date-keyed set of "completed" days.
+/// Subscribes to [WatchLogsInRange] for the full window the calendar
+/// view exposes (-10 years to +10 years from today) and aggregates
+/// streamed [WorkoutLog]s into a date-keyed set of "completed" days.
+/// The view slices the result by month; no per-month resubscription is
+/// needed because the underlying query is a single reactive Drift
+/// query and the resulting set is small enough to hold in memory.
 class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
   CalendarBloc({required WatchLogsInRange watchLogsInRange})
       : _watchLogsInRange = watchLogsInRange,
-        super(CalendarInitial()) {
-    on<MonthChangedEvent>(_onMonthChanged);
-    on<JumpToTodayEvent>(_onJumpToToday);
+        super(const CalendarLoading()) {
     on<LogsReceivedEvent>(_onLogsReceived);
     on<CalendarErrorEvent>(_onCalendarError);
 
-    // Kick off the initial subscription to today's month.
     final now = DateTime.now();
-    add(MonthChangedEvent(DateTime(now.year, now.month, 1)));
-  }
+    // Jan-1 boundaries half-open on the right so we include every day
+    // of the trailing December without an off-by-one. 21 years × 12
+    // months = 252, but [_kTotalMonths] renders 240 (20y) and the
+    // extra year is buffer for queries that span Dec → Jan.
+    final start = DateTime(now.year - 10, 1, 1);
+    final end = DateTime(now.year + 11, 1, 1);
 
-  final WatchLogsInRange _watchLogsInRange;
-  StreamSubscription<Either<Failure, List<WorkoutLog>>>? _sub;
-  DateTime? _activeMonth;
-
-  /// Returns the half-open `[start, end)` window covering a 6-row grid
-  /// for [month]. Always Sunday-start week.
-  ({DateTime start, DateTime end}) _windowFor(DateTime month) {
-    final first = DateTime(month.year, month.month, 1);
-    // weekday: Mon=1..Sun=7. Convert to Sunday-first: 0..6.
-    final sundayOffset = first.weekday % 7;
-    final start = first.subtract(Duration(days: sundayOffset));
-    final end = start.add(const Duration(days: 42));
-    return (start: start, end: end);
-  }
-
-  Future<void> _onMonthChanged(
-    MonthChangedEvent event,
-    Emitter<CalendarState> emit,
-  ) async {
-    // Normalise to a first-of-month DateTime so `==` comparisons work
-    // regardless of whether the caller passed a DateTime with day/time
-    // components.
-    final month = DateTime(event.month.year, event.month.month, 1);
-    if (_activeMonth == month) {
-      // Already on this month — still ensure the UI shows the loaded
-      // state in case the stream silently went silent.
-      return;
-    }
-    _activeMonth = month;
-    await _sub?.cancel();
-    _sub = null;
-
-    emit(CalendarLoading(visibleMonth: month));
-
-    final window = _windowFor(month);
-    _sub = _watchLogsInRange(
-      DateRange(start: window.start, end: window.end),
-    ).listen(
+    _sub = _watchLogsInRange(DateRange(start: start, end: end)).listen(
       (result) {
         result.fold(
           (failure) => add(CalendarErrorEvent(failure)),
@@ -88,22 +55,14 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
     );
   }
 
-  void _onJumpToToday(
-    JumpToTodayEvent event,
-    Emitter<CalendarState> emit,
-  ) {
-    final now = DateTime.now();
-    add(MonthChangedEvent(DateTime(now.year, now.month, 1)));
-  }
+  final WatchLogsInRange _watchLogsInRange;
+  StreamSubscription<Either<Failure, List<WorkoutLog>>>? _sub;
 
   void _onLogsReceived(
     LogsReceivedEvent event,
     Emitter<CalendarState> emit,
   ) {
-    final month = _activeMonth;
-    if (month == null) return;
     emit(CalendarLoaded(
-      visibleMonth: month,
       daysWithLogs: event.daysWithLogs,
       workoutsByDay: event.workoutsByDay,
     ));

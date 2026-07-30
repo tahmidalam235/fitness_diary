@@ -9,20 +9,6 @@ sealed class CalendarEvent extends Equatable {
   List<Object?> get props => const [];
 }
 
-/// Switches the visible month. Any day within the target month is accepted
-/// (the bloc normalises it to the first day of that month).
-class MonthChangedEvent extends CalendarEvent {
-  const MonthChangedEvent(this.month);
-  final DateTime month;
-
-  @override
-  List<Object?> get props => [month];
-}
-
-class JumpToTodayEvent extends CalendarEvent {
-  const JumpToTodayEvent();
-}
-
 /// Internal: emitted by the stream listener when a new batch of logs is
 /// received from the database.
 class LogsReceivedEvent extends CalendarEvent {

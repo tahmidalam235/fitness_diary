@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../core/di/injection.dart';
@@ -12,24 +11,74 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../bloc/calendar_bloc.dart';
-import '../bloc/calendar_event.dart';
 import '../bloc/calendar_state.dart';
-import '../widgets/calendar_grid.dart';
+import '../widgets/month_section.dart';
 
-/// Monthly Calendar page.
+/// Total number of months rendered by the all-months calendar view.
 ///
-/// - Header: month-year label + prev/next + "Today" jump button.
-/// - Body: 7×6 day grid with workout-completed dots.
+/// 20 years × 12 = 240. The bloc subscribes to the equivalent window
+/// (Jan 1 of `now - 10y` through Jan 1 of `now + 11y`) and exposes the
+/// full set of completed-day dates so the view can slice by month
+/// without any per-month resubscription.
+const int _kTotalMonths = 240;
+
+/// All-months Calendar page.
+///
+/// - Renders a vertical scroll of [_kTotalMonths] months (-10y to +10y).
+/// - Each row is a [MonthSection] with its own header + 7×6 grid.
 /// - Tap a day → `/calendar/day/yyyy-MM-dd`.
-class CalendarPage extends StatelessWidget {
+/// - Opens scrolled to today's month via a [GlobalKey] anchor and
+///   [Scrollable.ensureVisible] scheduled in a post-frame callback
+///   (the list is lazy, so we can't compute a fixed pixel offset).
+/// - The "Today" FAB jumps back to today's month.
+class CalendarPage extends StatefulWidget {
   const CalendarPage({super.key});
 
-  String _monthLabel(BuildContext context, DateTime month) {
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
-    ];
-    return '${months[month.month - 1]} ${month.year}';
+  @override
+  State<CalendarPage> createState() => _CalendarPageState();
+}
+
+class _CalendarPageState extends State<CalendarPage> {
+  late final ScrollController _controller;
+  late final List<DateTime> _months;
+  late final int _todayIndex;
+  final GlobalKey _todayKey = GlobalKey(debugLabel: 'calendar-today-month');
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _months = List<DateTime>.generate(
+      _kTotalMonths,
+      (i) => DateTime(now.year - 10 + (i ~/ 12), 1 + (i % 12), 1),
+    );
+    _todayIndex = _months.indexWhere(
+      (m) => m.year == now.year && m.month == now.month,
+    );
+    _controller = ScrollController();
+
+    // Defer the jump until after the first frame so the lazy
+    // ListView has actually laid out the target item, then scroll to
+    // it via [Scrollable.ensureVisible] using a [GlobalKey] anchor.
+    if (_todayIndex >= 0) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final ctx = _todayKey.currentContext;
+        if (ctx == null) return;
+        Scrollable.ensureVisible(
+          ctx,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOutCubic,
+          alignment: 0,
+        );
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   String _formatDayParam(DateTime d) =>
@@ -37,20 +86,15 @@ class CalendarPage extends StatelessWidget {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  /// Returns the normalized first-of-month DateTime for the month
-  /// [delta] months away from [current]. Dart's `DateTime` constructor
-  /// silently rolls over (e.g. month 0 → previous December), so this
-  /// is purely a clarity wrapper — we still rely on Dart's overflow
-  /// semantics for year/month wrapping.
-  DateTime _stepMonth(DateTime current, int delta) {
-    final next = DateTime(current.year, current.month + delta, 1);
-    return DateTime(next.year, next.month, 1);
-  }
-
-  void _changeMonth(BuildContext context, DateTime current, int delta) {
-    context.read<CalendarBloc>().add(
-          MonthChangedEvent(_stepMonth(current, delta)),
-        );
+  void _jumpToToday() {
+    final ctx = _todayKey.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutCubic,
+      alignment: 0,
+    );
   }
 
   @override
@@ -63,6 +107,11 @@ class CalendarPage extends StatelessWidget {
         title: l10n.calendarTitle,
         useNavigationRail: true,
         showBackButton: true,
+        floatingActionButton: FloatingActionButton.small(
+          onPressed: _jumpToToday,
+          tooltip: l10n.calendarToday,
+          child: const Icon(Icons.today_rounded),
+        ),
         body: BlocBuilder<CalendarBloc, CalendarState>(
           builder: (context, state) {
             if (state is CalendarInitial || state is CalendarLoading) {
@@ -79,160 +128,40 @@ class CalendarPage extends StatelessWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _CalendarHeader(
-                    month: state.visibleMonth,
-                    isCurrentMonth: state.isCurrentMonth,
-                    label: _monthLabel(context, state.visibleMonth),
-                    onPrev: () => _changeMonth(context, state.visibleMonth, -1),
-                    onNext: () => _changeMonth(context, state.visibleMonth, 1),
-                    onToday: () => context
-                        .read<CalendarBloc>()
-                        .add(const JumpToTodayEvent()),
-                  ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.xs,
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      AppSpacing.xs,
                     ),
                     child: _LegendChip(label: l10n.calendarLegendCompleted),
                   ),
                   Expanded(
-                    child: CalendarGrid(
-                      month: state.visibleMonth,
-                      daysWithLogs: state.daysWithLogs,
-                      workoutsByDay: state.workoutsByDay,
-                      onTapDay: (d) => context.pushNamed(
-                        RouteNames.calendarDay,
-                        pathParameters: {'date': _formatDayParam(d)},
-                      ),
+                    child: ListView.builder(
+                      controller: _controller,
+                      itemCount: _months.length,
+                      itemBuilder: (context, index) {
+                        final month = _months[index];
+                        return MonthSection(
+                          key: index == _todayIndex ? _todayKey : null,
+                          month: month,
+                          daysWithLogs: state.daysWithLogs,
+                          workoutsByDay: state.workoutsByDay,
+                          onTapDay: (d) => context.pushNamed(
+                            RouteNames.calendarDay,
+                            pathParameters: {'date': _formatDayParam(d)},
+                          ),
+                        );
+                      },
                     ),
                   ),
                 ],
               );
             }
-            // Fallback for any future state we don't yet render.
             return const SizedBox.shrink();
           },
         ),
-      ),
-    );
-  }
-}
-
-class _CalendarHeader extends StatelessWidget {
-  const _CalendarHeader({
-    required this.month,
-    required this.isCurrentMonth,
-    required this.label,
-    required this.onPrev,
-    required this.onNext,
-    required this.onToday,
-  });
-
-  final DateTime month;
-  final bool isCurrentMonth;
-  final String label;
-  final VoidCallback onPrev;
-  final VoidCallback onNext;
-  final VoidCallback onToday;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.md,
-      ),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
-            theme.colorScheme.surface,
-          ],
-        ),
-        borderRadius: const BorderRadius.vertical(
-          bottom: Radius.circular(AppRadius.lg),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              _RoundIconButton(
-                icon: Icons.chevron_left_rounded,
-                tooltip: l10n.calendarMonthPrev,
-                onPressed: onPrev,
-              ),
-              Expanded(
-                child: Center(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      label,
-                      maxLines: 1,
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              _RoundIconButton(
-                icon: Icons.chevron_right_rounded,
-                tooltip: l10n.calendarMonthNext,
-                onPressed: onNext,
-              ),
-            ],
-          ),
-          if (!isCurrentMonth) ...[
-            const Gap(AppSpacing.sm),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                onPressed: onToday,
-                icon: const Icon(Icons.today_rounded, size: 18),
-                label: Text(l10n.calendarToday),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-/// Filled tonal circular icon button used in the calendar header.
-class _RoundIconButton extends StatelessWidget {
-  const _RoundIconButton({
-    required this.icon,
-    required this.tooltip,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String tooltip;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface.withValues(alpha: 0.9),
-      shape: const CircleBorder(
-        side: BorderSide(color: Color(0x1A000000)),
-      ),
-      child: IconButton(
-        onPressed: onPressed,
-        tooltip: tooltip,
-        icon: Icon(icon),
       ),
     );
   }
@@ -267,7 +196,7 @@ class _LegendChip extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
             ),
-            const Gap(AppSpacing.xs),
+            const SizedBox(width: AppSpacing.xs),
             Text(
               label,
               style: theme.textTheme.labelSmall?.copyWith(
