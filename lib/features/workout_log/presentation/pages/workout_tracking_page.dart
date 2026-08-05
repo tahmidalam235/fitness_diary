@@ -104,8 +104,8 @@ class _Body extends StatelessWidget {
           builder: (context, state) {
             // Save is only enabled once today's entry exists — before
             // that, there's nothing meaningful to save.
-            final canSave = state is WorkoutTrackingLoaded &&
-                state.entry != null;
+            final canSave =
+                state is WorkoutTrackingLoaded && state.entry != null;
             return IconButton(
               tooltip: l10n.commonSave,
               icon: const Icon(Icons.check_rounded),
@@ -114,7 +114,12 @@ class _Body extends StatelessWidget {
           },
         ),
       ],
-      body: BlocBuilder<WorkoutTrackingBloc, WorkoutTrackingState>(
+      body: BlocConsumer<WorkoutTrackingBloc, WorkoutTrackingState>(
+        listener: (context, state) {
+          if (state is WorkoutTrackingDeleted) {
+            context.pop();
+          }
+        },
         builder: (context, state) {
           if (state is WorkoutTrackingInitial ||
               state is WorkoutTrackingLoading) {
@@ -226,15 +231,9 @@ class _SummaryHero extends StatelessWidget {
           const Gap(AppSpacing.lg),
           Row(
             children: [
-              _HeroStat(
-                label: 'Sets',
-                value: entry.sets?.toString() ?? '—',
-              ),
+              _HeroStat(label: 'Sets', value: entry.sets?.toString() ?? '—'),
               const Gap(AppSpacing.md),
-              _HeroStat(
-                label: 'Reps',
-                value: entry.reps?.toString() ?? '—',
-              ),
+              _HeroStat(label: 'Reps', value: entry.reps?.toString() ?? '—'),
               const Gap(AppSpacing.md),
               _HeroStat(
                 label: 'Weight',
@@ -317,12 +316,7 @@ class _TrackingCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    void upsert({
-      int? sets,
-      int? reps,
-      double? weight,
-      int? durationSeconds,
-    }) {
+    void upsert({int? sets, int? reps, double? weight, int? durationSeconds}) {
       context.read<WorkoutTrackingBloc>().add(
         UpsertTodayEntryEvent(
           sets: sets,
@@ -371,9 +365,9 @@ class _TrackingCard extends StatelessWidget {
                     Icons.delete_outline_rounded,
                     color: theme.colorScheme.error.withValues(alpha: 0.85),
                   ),
-                  onPressed: () => context
-                      .read<WorkoutTrackingBloc>()
-                      .add(const DeleteTodayEntryEvent()),
+                  onPressed: () => context.read<WorkoutTrackingBloc>().add(
+                    const DeleteTodayEntryEvent(),
+                  ),
                 ),
               ],
             ),
@@ -445,8 +439,8 @@ class _TrackingCard extends StatelessWidget {
                         durationSeconds: text.trim().isEmpty
                             ? null
                             : (double.tryParse(text.trim()) == null
-                                ? null
-                                : (double.parse(text.trim()) * 60).round()),
+                                  ? null
+                                  : (double.parse(text.trim()) * 60).round()),
                       );
                     },
                   ),

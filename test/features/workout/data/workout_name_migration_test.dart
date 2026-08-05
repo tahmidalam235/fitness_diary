@@ -121,6 +121,12 @@ void main() {
         'ALTER TABLE workouts RENAME COLUMN name TO exercise_name',
       );
 
+      // Apply the v8 addition (is_favorite) so the e2e insert below
+      // runs against the current schema.
+      await database.customStatement(
+        'ALTER TABLE workouts ADD COLUMN is_favorite INTEGER NOT NULL DEFAULT 0',
+      );
+
       // Seed a session.
       await SessionDao(
         database,

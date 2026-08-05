@@ -35,6 +35,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return AppScaffold(
       title: l10n.dashboardTitle,
       useNavigationRail: true,
+      titleLeadingIcon: true,
       body: BlocProvider<SessionBloc>(
         create: (_) => getIt<SessionBloc>()..add(const WatchSessionsEvent()),
         child: const _DashboardView(),
@@ -119,19 +120,7 @@ class _DashboardViewState extends State<_DashboardView> {
                 AppSpacing.xxl,
               ),
               children: [
-                _GreetingHero(
-                  l10n: l10n,
-                  theme: theme,
-                  sessionsCount: sessions.length,
-                ),
-                const Gap(AppSpacing.xl),
-                _KpiRow(
-                  stats: stats,
-                  l10n: l10n,
-                  theme: theme,
-                ),
-                const Gap(AppSpacing.xl),
-                _QuickActionsRow(l10n: l10n),
+                _KpiRow(stats: stats, l10n: l10n, theme: theme),
                 const Gap(AppSpacing.xl),
                 _RecentActivitySection(
                   sessions: sessions,
@@ -160,145 +149,11 @@ class _DashboardStats {
 }
 
 // ============================================================================
-// HERO GREETING
-// ============================================================================
-
-class _GreetingHero extends StatelessWidget {
-  const _GreetingHero({
-    required this.l10n,
-    required this.theme,
-    required this.sessionsCount,
-  });
-
-  final AppLocalizations l10n;
-  final ThemeData theme;
-  final int sessionsCount;
-
-  String _greeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 5) return l10n.dashboardGreetingNight;
-    if (hour < 12) return l10n.dashboardGreetingMorning;
-    if (hour < 17) return l10n.dashboardGreetingAfternoon;
-    if (hour < 21) return l10n.dashboardGreetingEvening;
-    return l10n.dashboardGreetingNight;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF22D3EE), // cyan-400
-            Color(0xFF3B82F6), // blue-500
-            Color(0xFF8B5CF6), // violet-500
-          ],
-          stops: [0.0, 0.55, 1.0],
-        ),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF3B82F6).withValues(alpha: 0.40),
-            blurRadius: 28,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.22),
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.35),
-                width: 1.5,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(
-              Icons.wb_sunny_rounded,
-              color: Colors.white,
-              size: 30,
-            ),
-          ),
-          const Gap(AppSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _greeting(),
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const Gap(AppSpacing.xxs),
-                Text(
-                  l10n.dashboardSubtitle,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.92),
-                    letterSpacing: 0.1,
-                  ),
-                ),
-                const Gap(AppSpacing.sm),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xxs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.22),
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.fitness_center_rounded,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                      const Gap(AppSpacing.xs),
-                      Text(
-                        sessionsCount == 1
-                            ? '1 session template'
-                            : '$sessionsCount session templates',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ============================================================================
 // KPI ROW (3 colorful tiles)
 // ============================================================================
 
 class _KpiRow extends StatelessWidget {
-  const _KpiRow({
-    required this.stats,
-    required this.l10n,
-    required this.theme,
-  });
+  const _KpiRow({required this.stats, required this.l10n, required this.theme});
 
   final _DashboardStats? stats;
   final AppLocalizations l10n;
@@ -425,160 +280,6 @@ class _KpiTile extends StatelessWidget {
 }
 
 // ============================================================================
-// QUICK ACTIONS
-// ============================================================================
-
-class _QuickActionsRow extends StatelessWidget {
-  const _QuickActionsRow({required this.l10n});
-  final AppLocalizations l10n;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _SectionTitle(title: l10n.dashboardQuickActionsTitle),
-        const Gap(AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _ActionTile(
-                title: l10n.dashboardActionStartToday,
-                sub: l10n.dashboardActionStartTodaySub,
-                icon: Icons.play_circle_filled_rounded,
-                bg: const Color(0xFFFDE68A), // amber-200
-                fg: const Color(0xFF92400E), // amber-800
-                accent: const Color(0xFFF59E0B), // amber-500
-                onTap: () => context.goNamed(RouteNames.today),
-              ),
-            ),
-            const Gap(AppSpacing.sm),
-            Expanded(
-              child: _ActionTile(
-                title: l10n.dashboardActionViewCalendar,
-                sub: l10n.dashboardActionViewCalendarSub,
-                icon: Icons.calendar_month_rounded,
-                bg: const Color(0xFFBFDBFE), // blue-200
-                fg: const Color(0xFF1E3A8A), // blue-900
-                accent: const Color(0xFF3B82F6), // blue-500
-                onTap: () => context.goNamed(RouteNames.calendar),
-              ),
-            ),
-            const Gap(AppSpacing.sm),
-            Expanded(
-              child: _ActionTile(
-                title: l10n.dashboardActionBrowseSessions,
-                sub: l10n.dashboardActionBrowseSessionsSub,
-                icon: Icons.style_rounded,
-                bg: const Color(0xFFDDD6FE), // violet-200
-                fg: const Color(0xFF5B21B6), // violet-800
-                accent: const Color(0xFF8B5CF6), // violet-500
-                onTap: () => context.goNamed(RouteNames.sessions),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
-    required this.title,
-    required this.sub,
-    required this.icon,
-    required this.bg,
-    required this.fg,
-    required this.accent,
-    required this.onTap,
-  });
-
-  final String title;
-  final String sub;
-  final IconData icon;
-  final Color bg;
-  final Color fg;
-  final Color accent;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Material(
-      color: bg,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      elevation: 2,
-      shadowColor: accent.withValues(alpha: 0.25),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                bg,
-                Color.alphaBlend(
-                  accent.withValues(alpha: 0.18),
-                  bg,
-                ),
-              ],
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.35),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: accent, size: 20),
-              ),
-              const Gap(AppSpacing.md),
-              Text(
-                title,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: fg,
-                  fontWeight: FontWeight.w800,
-                  height: 1.15,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const Gap(AppSpacing.xxs),
-              Text(
-                sub,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: fg.withValues(alpha: 0.80),
-                  fontWeight: FontWeight.w600,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
 // RECENT ACTIVITY
 // ============================================================================
 
@@ -638,15 +339,17 @@ class _RecentActivitySection extends StatelessWidget {
     for (var i = 0; i < sessions.take(4).length; i++) {
       final s = sessions[i];
       final accent = accents[i % accents.length];
-      out.add(_RecentItem(
-        sessionId: s.id!,
-        title: s.name.isEmpty ? 'Untitled session' : s.name,
-        subtitle: s.description.isEmpty
-            ? 'Tap to open the session and start a workout.'
-            : s.description,
-        icon: Icons.style_rounded,
-        accent: accent,
-      ));
+      out.add(
+        _RecentItem(
+          sessionId: s.id!,
+          title: s.name.isEmpty ? 'Untitled session' : s.name,
+          subtitle: s.description.isEmpty
+              ? 'Tap to open the session and start a workout.'
+              : s.description,
+          icon: Icons.style_rounded,
+          accent: accent,
+        ),
+      );
     }
     return out;
   }

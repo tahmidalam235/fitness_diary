@@ -136,10 +136,10 @@ class TodayWorkoutsBloc extends Bloc<TodayWorkoutsEvent, TodayWorkoutsState> {
     required WatchTodayEntriesByWorkout watchTodayEntriesByWorkout,
     required GetOrCreateTodayLog getOrCreateTodayLog,
     required WatchWorkoutsForSession watchWorkoutsForSession,
-  })  : _watchTodayEntriesByWorkout = watchTodayEntriesByWorkout,
-        _getOrCreateTodayLog = getOrCreateTodayLog,
-        _watchWorkoutsForSession = watchWorkoutsForSession,
-        super(const TodayWorkoutsInitial()) {
+  }) : _watchTodayEntriesByWorkout = watchTodayEntriesByWorkout,
+       _getOrCreateTodayLog = getOrCreateTodayLog,
+       _watchWorkoutsForSession = watchWorkoutsForSession,
+       super(const TodayWorkoutsInitial()) {
     on<WatchTodayWorkoutsEvent>(_onWatch);
     on<_TodayReceivedEvent>(_onReceived);
     on<_WorkoutsReceivedEvent>(_onWorkoutsReceived);
@@ -155,10 +155,7 @@ class TodayWorkoutsBloc extends Bloc<TodayWorkoutsEvent, TodayWorkoutsState> {
   StreamSubscription<Either<Failure, List<Workout>>>? _workoutsSub;
   int? _sessionId;
 
-  /// Latest cached payloads. We keep them here so the first streamed
-  /// value isn't lost if it lands before the corresponding log/loaded
-  /// state has been emitted (e.g. a fast Drift snapshot).
-  Map<int, WorkoutLogEntry>? _latestEntries;
+  /// names alongside the entries).
   Map<int, Workout> _latestWorkouts = const {};
 
   Future<void> _onWatch(
@@ -166,7 +163,6 @@ class TodayWorkoutsBloc extends Bloc<TodayWorkoutsEvent, TodayWorkoutsState> {
     Emitter<TodayWorkoutsState> emit,
   ) async {
     _sessionId = event.sessionId;
-    _latestEntries = null;
     _latestWorkouts = const {};
     emit(const TodayWorkoutsLoading());
 
@@ -189,41 +185,45 @@ class TodayWorkoutsBloc extends Bloc<TodayWorkoutsEvent, TodayWorkoutsState> {
     final sessionId = _sessionId;
     if (sessionId == null) return;
 
-    // The log row may have just been created; emit a Loaded shell so
-    // the UI can render while the entries/workouts streams warm up.
-    emit(TodayWorkoutsLoaded(
-      sessionId: sessionId,
-      workoutLog: event.log,
-      entries: _latestEntries?.values.toList(growable: false) ?? const [],
-      workoutsById: _latestWorkouts,
-    ));
+    // First, try to get existing entries for today's log.
+    final initialEntriesResult = await _watchTodayEntriesByWorkout(
+      sessionId,
+    ).first;
+    final initialEntries = initialEntriesResult
+        .getOrElse((_) => const {})
+        .values
+        .toList();
 
-    _entriesSub = _watchTodayEntriesByWorkout(sessionId).listen(
-      (result) {
-        result.fold(
-          (failure) => add(_TodayErrorEvent(failure)),
-          (entries) => add(_TodayReceivedEvent(entries)),
-        );
-      },
+    emit(
+      TodayWorkoutsLoaded(
+        sessionId: sessionId,
+        workoutLog: event.log,
+        entries: initialEntries,
+        workoutsById: _latestWorkouts,
+      ),
     );
 
-    _workoutsSub = _watchWorkoutsForSession(sessionId).listen(
-      (result) {
-        result.fold(
-          (failure) => add(_TodayErrorEvent(failure)),
-          (workouts) => add(_WorkoutsReceivedEvent({
-            for (final w in workouts) w.workoutId: w,
-          })),
-        );
-      },
-    );
+    _entriesSub = _watchTodayEntriesByWorkout(sessionId).listen((result) {
+      result.fold(
+        (failure) => add(_TodayErrorEvent(failure)),
+        (entries) => add(_TodayReceivedEvent(entries)),
+      );
+    });
+
+    _workoutsSub = _watchWorkoutsForSession(sessionId).listen((result) {
+      result.fold(
+        (failure) => add(_TodayErrorEvent(failure)),
+        (workouts) => add(
+          _WorkoutsReceivedEvent({for (final w in workouts) w.workoutId: w}),
+        ),
+      );
+    });
   }
 
   void _onReceived(
     _TodayReceivedEvent event,
     Emitter<TodayWorkoutsState> emit,
   ) {
-    _latestEntries = event.entriesByWorkout;
     final entries = event.entriesByWorkout.values.toList(growable: false);
     final current = state;
     if (current is TodayWorkoutsLoaded) {
@@ -242,10 +242,7 @@ class TodayWorkoutsBloc extends Bloc<TodayWorkoutsEvent, TodayWorkoutsState> {
     }
   }
 
-  void _onError(
-    _TodayErrorEvent event,
-    Emitter<TodayWorkoutsState> emit,
-  ) {
+  void _onError(_TodayErrorEvent event, Emitter<TodayWorkoutsState> emit) {
     emit(TodayWorkoutsError(event.failure));
   }
 

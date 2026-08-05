@@ -25,6 +25,20 @@ class RoutePaths {
   static const String calendarDay = 'day/:date';
   static const String dashboard = '/dashboard';
   static const String settings = '/settings';
+
+  // Auth
+  static const String login = '/login';
+  static const String signup = '/signup';
+
+  // Profile
+  static const String profile = '/profile';
+
+  // History & Progress
+  static const String historyPeriod = '/history/period';
+  static const String historyCompare = '/history/compare';
+  static const String freeze = '/freeze';
+  static const String historyOverview = '/history';
+  static const String streak = '/streak';
 }
 
 /// Named-route identifiers used with `context.goNamed(...)`.
@@ -45,4 +59,13 @@ class RouteNames {
   static const String calendarDay = 'calendarDay';
   static const String dashboard = 'dashboard';
   static const String settings = 'settings';
+
+  static const String login = 'login';
+  static const String signup = 'signup';
+  static const String profile = 'profile';
+  static const String historyPeriod = 'historyPeriod';
+  static const String historyCompare = 'historyCompare';
+  static const String freeze = 'freeze';
+  static const String historyOverview = 'historyOverview';
+  static const String streak = 'streak';
 }

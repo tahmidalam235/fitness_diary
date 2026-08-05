@@ -81,7 +81,7 @@ class _CalendarPageState extends State<CalendarPage> {
       child: AppScaffold(
         title: l10n.calendarTitle,
         useNavigationRail: true,
-        showBackButton: true,
+        titleLeadingIcon: true,
         floatingActionButton: FloatingActionButton.small(
           onPressed: _jumpToToday,
           tooltip: l10n.calendarToday,
@@ -104,8 +104,9 @@ class _CalendarPageState extends State<CalendarPage> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _MonthYearBar(
-                    label: DateFormat.yMMMM(l10n.localeName)
-                        .format(_visibleMonth),
+                    label: DateFormat.yMMMM(
+                      l10n.localeName,
+                    ).format(_visibleMonth),
                     onTap: _pickMonth,
                   ),
                   Padding(

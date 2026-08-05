@@ -778,6 +778,12 @@ abstract class AppLocalizations {
   /// **'The workout library is coming soon.'**
   String get workoutsComingSoon;
 
+  /// No description provided for @workoutsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse every exercise across your sessions'**
+  String get workoutsSubtitle;
+
   /// No description provided for @workoutAddTitle.
   ///
   /// In en, this message translates to:
@@ -945,6 +951,174 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The requested page does not exist.'**
   String get routerErrorMessage;
+
+  /// No description provided for @authLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back'**
+  String get authLoginTitle;
+
+  /// No description provided for @authLoginSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to continue your journey.'**
+  String get authLoginSubtitle;
+
+  /// No description provided for @authUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get authUsername;
+
+  /// No description provided for @authPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPassword;
+
+  /// No description provided for @authPasswordRule.
+  ///
+  /// In en, this message translates to:
+  /// **'At least 8 characters'**
+  String get authPasswordRule;
+
+  /// No description provided for @authLoginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign In'**
+  String get authLoginButton;
+
+  /// No description provided for @authNoAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Don\'t have an account? Sign up'**
+  String get authNoAccount;
+
+  /// No description provided for @authSignupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get authSignupTitle;
+
+  /// No description provided for @authSignupSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Start tracking your fitness today.'**
+  String get authSignupSubtitle;
+
+  /// No description provided for @authUsernameRule.
+  ///
+  /// In en, this message translates to:
+  /// **'3-32 characters'**
+  String get authUsernameRule;
+
+  /// No description provided for @authConfirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Password'**
+  String get authConfirmPassword;
+
+  /// No description provided for @authDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display Name'**
+  String get authDisplayName;
+
+  /// No description provided for @authEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Address'**
+  String get authEmail;
+
+  /// No description provided for @authSignupButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get authSignupButton;
+
+  /// No description provided for @authHasAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Sign in'**
+  String get authHasAccount;
+
+  /// No description provided for @authInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid username or password'**
+  String get authInvalidCredentials;
+
+  /// No description provided for @authUsernameTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Username is already taken'**
+  String get authUsernameTaken;
+
+  /// No description provided for @authLogout.
+  ///
+  /// In en, this message translates to:
+  /// **'Log Out'**
+  String get authLogout;
+
+  /// No description provided for @authLogoutConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Log out?'**
+  String get authLogoutConfirm;
+
+  /// No description provided for @authLogoutConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to log out of your account?'**
+  String get authLogoutConfirmBody;
+
+  /// No description provided for @profileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profileTitle;
+
+  /// No description provided for @historyFreezeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak Freeze'**
+  String get historyFreezeTitle;
+
+  /// No description provided for @historyFreezeHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'Freeze a day to preserve your streak when you can\'t train.'**
+  String get historyFreezeHelp;
+
+  /// No description provided for @historyFreezeEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No freezes applied yet.'**
+  String get historyFreezeEmpty;
+
+  /// No description provided for @historyCompareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Compare Progress'**
+  String get historyCompareTitle;
+
+  /// No description provided for @historyCompareRangeA.
+  ///
+  /// In en, this message translates to:
+  /// **'First Period'**
+  String get historyCompareRangeA;
+
+  /// No description provided for @historyCompareRangeB.
+  ///
+  /// In en, this message translates to:
+  /// **'Second Period'**
+  String get historyCompareRangeB;
+
+  /// No description provided for @historyPeriodEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No data for this period.'**
+  String get historyPeriodEmpty;
 }
 
 class _AppLocalizationsDelegate

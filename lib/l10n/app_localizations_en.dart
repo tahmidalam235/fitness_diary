@@ -390,6 +390,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutsComingSoon => 'The workout library is coming soon.';
 
   @override
+  String get workoutsSubtitle => 'Browse every exercise across your sessions';
+
+  @override
   String get workoutAddTitle => 'Add Workout';
 
   @override
@@ -485,4 +488,90 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get routerErrorMessage => 'The requested page does not exist.';
+
+  @override
+  String get authLoginTitle => 'Welcome back';
+
+  @override
+  String get authLoginSubtitle => 'Sign in to continue your journey.';
+
+  @override
+  String get authUsername => 'Username';
+
+  @override
+  String get authPassword => 'Password';
+
+  @override
+  String get authPasswordRule => 'At least 8 characters';
+
+  @override
+  String get authLoginButton => 'Sign In';
+
+  @override
+  String get authNoAccount => 'Don\'t have an account? Sign up';
+
+  @override
+  String get authSignupTitle => 'Create Account';
+
+  @override
+  String get authSignupSubtitle => 'Start tracking your fitness today.';
+
+  @override
+  String get authUsernameRule => '3-32 characters';
+
+  @override
+  String get authConfirmPassword => 'Confirm Password';
+
+  @override
+  String get authDisplayName => 'Display Name';
+
+  @override
+  String get authEmail => 'Email Address';
+
+  @override
+  String get authSignupButton => 'Create Account';
+
+  @override
+  String get authHasAccount => 'Already have an account? Sign in';
+
+  @override
+  String get authInvalidCredentials => 'Invalid username or password';
+
+  @override
+  String get authUsernameTaken => 'Username is already taken';
+
+  @override
+  String get authLogout => 'Log Out';
+
+  @override
+  String get authLogoutConfirm => 'Log out?';
+
+  @override
+  String get authLogoutConfirmBody =>
+      'Are you sure you want to log out of your account?';
+
+  @override
+  String get profileTitle => 'Profile';
+
+  @override
+  String get historyFreezeTitle => 'Streak Freeze';
+
+  @override
+  String get historyFreezeHelp =>
+      'Freeze a day to preserve your streak when you can\'t train.';
+
+  @override
+  String get historyFreezeEmpty => 'No freezes applied yet.';
+
+  @override
+  String get historyCompareTitle => 'Compare Progress';
+
+  @override
+  String get historyCompareRangeA => 'First Period';
+
+  @override
+  String get historyCompareRangeB => 'Second Period';
+
+  @override
+  String get historyPeriodEmpty => 'No data for this period.';
 }

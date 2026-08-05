@@ -136,6 +136,10 @@ class WorkoutTrackingError extends WorkoutTrackingState {
   List<Object?> get props => [failure];
 }
 
+class WorkoutTrackingDeleted extends WorkoutTrackingState {
+  const WorkoutTrackingDeleted();
+}
+
 // -----------------------------------------------------------------------------
 // Bloc
 // -----------------------------------------------------------------------------
@@ -158,13 +162,13 @@ class WorkoutTrackingBloc
     required DeleteEntry deleteEntry,
     required GetLastEntriesForWorkouts getLastEntriesForWorkouts,
     required AddWorkoutsToToday addWorkoutsToToday,
-  })  : _getOrCreateTodayLog = getOrCreateTodayLog,
-        _watchTodayEntriesByWorkout = watchTodayEntriesByWorkout,
-        _upsertEntry = upsertEntry,
-        _deleteEntry = deleteEntry,
-        _getLastEntriesForWorkouts = getLastEntriesForWorkouts,
-        _addWorkoutsToToday = addWorkoutsToToday,
-        super(const WorkoutTrackingInitial()) {
+  }) : _getOrCreateTodayLog = getOrCreateTodayLog,
+       _watchTodayEntriesByWorkout = watchTodayEntriesByWorkout,
+       _upsertEntry = upsertEntry,
+       _deleteEntry = deleteEntry,
+       _getLastEntriesForWorkouts = getLastEntriesForWorkouts,
+       _addWorkoutsToToday = addWorkoutsToToday,
+       super(const WorkoutTrackingInitial()) {
     on<InitTrackingEvent>(_onInit);
     on<_LogLoadedEvent>(_onLogLoaded);
     on<_EntriesReceivedEvent>(_onEntriesReceived);
@@ -212,9 +216,11 @@ class WorkoutTrackingBloc
     _sub = null;
 
     _sub = _watchTodayEntriesByWorkout(sessionId).listen(
-      (result) => add(_EntriesReceivedEvent(
-        result.getOrElse((_) => const <int, WorkoutLogEntry>{}),
-      )),
+      (result) => add(
+        _EntriesReceivedEvent(
+          result.getOrElse((_) => const <int, WorkoutLogEntry>{}),
+        ),
+      ),
     );
 
     // If today's log doesn't yet have an entry for this workout, seed
@@ -227,35 +233,31 @@ class WorkoutTrackingBloc
       (_) => const <int, WorkoutLogEntry>{},
     );
     if (!entriesByWorkout.containsKey(workout.workoutId)) {
-      final lastResult =
-          await _getLastEntriesForWorkouts(<int>[workout.workoutId]);
+      final lastResult = await _getLastEntriesForWorkouts(<int>[
+        workout.workoutId,
+      ]);
       final prior = lastResult.fold(
         (failure) => const <int, WorkoutLogEntry>{},
         (map) => map,
       )[workout.workoutId];
-      final seed = _seedEntry(
-        log: event.log,
-        workout: workout,
-        prior: prior,
-      );
+      final seed = _seedEntry(log: event.log, workout: workout, prior: prior);
       final addResult = await _addWorkoutsToToday(
         AddWorkoutsToTodayParams(
           sessionId: sessionId,
           entries: <WorkoutLogEntry>[seed],
         ),
       );
-      addResult.fold(
-        (failure) => emit(WorkoutTrackingError(failure)),
-        (_) {},
-      );
+      addResult.fold((failure) => emit(WorkoutTrackingError(failure)), (_) {});
       return;
     }
 
-    emit(WorkoutTrackingLoaded(
-      workoutLog: event.log,
-      workout: workout,
-      entriesByWorkout: entriesByWorkout,
-    ));
+    emit(
+      WorkoutTrackingLoaded(
+        workoutLog: event.log,
+        workout: workout,
+        entriesByWorkout: entriesByWorkout,
+      ),
+    );
   }
 
   void _onEntriesReceived(
@@ -271,11 +273,13 @@ class WorkoutTrackingBloc
       return;
     }
     if (current is WorkoutTrackingLoading) {
-      emit(WorkoutTrackingLoaded(
-        workoutLog: log,
-        workout: workout,
-        entriesByWorkout: event.entriesByWorkout,
-      ));
+      emit(
+        WorkoutTrackingLoaded(
+          workoutLog: log,
+          workout: workout,
+          entriesByWorkout: event.entriesByWorkout,
+        ),
+      );
     }
   }
 
@@ -289,7 +293,8 @@ class WorkoutTrackingBloc
     final workout = _workout;
     if (workout == null) return;
 
-    final base = existing ??
+    final base =
+        existing ??
         WorkoutLogEntry(
           id: 0,
           workoutLogId: current.workoutLog.id,
@@ -305,8 +310,7 @@ class WorkoutTrackingBloc
       sets: event.sets ?? base.sets,
       reps: event.reps ?? base.reps,
       weight: event.weight ?? base.weight,
-      durationSeconds:
-          event.durationSeconds ?? base.durationSeconds,
+      durationSeconds: event.durationSeconds ?? base.durationSeconds,
       notes: event.notes ?? base.notes,
     );
 
@@ -328,7 +332,7 @@ class WorkoutTrackingBloc
     final result = await _deleteEntry(entry.id);
     result.fold(
       (failure) => emit(WorkoutTrackingError(failure)),
-      (_) {},
+      (_) => emit(const WorkoutTrackingDeleted()),
     );
   }
 
@@ -349,8 +353,7 @@ class WorkoutTrackingBloc
       sets: prior?.sets ?? workout.defaultSets,
       reps: prior?.reps ?? workout.defaultReps,
       weight: prior?.weight ?? workout.defaultWeight,
-      durationSeconds:
-          prior?.durationSeconds ?? workout.defaultDurationSeconds,
+      durationSeconds: prior?.durationSeconds ?? workout.defaultDurationSeconds,
       notes: '',
     );
   }

@@ -43,3 +43,24 @@ final class ValidationFailure extends Failure {
 final class UnexpectedFailure extends Failure {
   const UnexpectedFailure({super.message = 'Unexpected error', super.cause});
 }
+
+enum AuthFailureCode {
+  invalidCredentials,
+  usernameTaken,
+  userNotFound,
+  unknown,
+}
+
+/// Authentication-related failures.
+final class AuthFailure extends Failure {
+  const AuthFailure({
+    required this.code,
+    super.message = 'Auth failure',
+    super.cause,
+  });
+
+  final AuthFailureCode code;
+
+  @override
+  List<Object?> get props => [message, cause, code];
+}

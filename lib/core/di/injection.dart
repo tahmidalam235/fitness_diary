@@ -1,3 +1,8 @@
+import '../../features/auth/data/auth_service.dart';
+import '../../features/profile/data/profile_service.dart';
+import '../../features/settings/data/notification_service.dart';
+import '../../features/settings/data/settings_service.dart';
+import '../../features/settings/data/theme_service.dart';
 import '../database/app_database.dart';
 import 'injection.config.dart';
 import 'service_locator.dart';
@@ -20,4 +25,15 @@ Future<void> setupInjection() async {
   getIt.registerHistoryFeature();
   getIt.registerCalendarFeature();
   getIt.registerTodayFeature();
+  getIt.registerAuthFeature();
+  getIt.registerSettingsFeature();
+
+  // Eagerly load persisted preferences + auth state before the UI
+  // draws, ensuring the router redirect and theme selection work
+  // on the very first frame.
+  await getIt<AuthService>().load();
+  await getIt<SettingsService>().load();
+  await getIt<ThemeService>().load();
+  await getIt<ProfileService>().load();
+  await getIt<NotificationService>().init();
 }

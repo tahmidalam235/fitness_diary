@@ -8,8 +8,8 @@ import '../../../history/domain/entities/daily_log_group.dart';
 import '../../../history/domain/usecases/get_workouts_by_ids.dart';
 import '../../../history/domain/usecases/watch_entries_by_log_for_day.dart';
 import '../../../history/domain/usecases/watch_logs_for_day.dart';
-import '../../../session/domain/usecases/get_sessions_by_ids.dart';
 import '../../../session/domain/entities/session.dart';
+import '../../../session/domain/usecases/get_sessions_by_ids.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
@@ -19,18 +19,17 @@ import 'daily_details_state.dart';
 /// Bloc that loads the day's logs, entries, and lookup maps for the
 /// Daily Details page. Subscribes to streams reactively so any change
 /// to the underlying logs (e.g. late-arriving writes) updates the UI.
-class DailyDetailsBloc
-    extends Bloc<DailyDetailsEvent, DailyDetailsState> {
+class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
   DailyDetailsBloc({
     required WatchLogsForDay watchLogsForDay,
     required WatchEntriesByLogForDay watchEntriesByLogForDay,
     required GetWorkoutsByIds getWorkoutsByIds,
     required GetSessionsByIds getSessionsByIds,
-  })  : _watchLogsForDay = watchLogsForDay,
-        _watchEntriesByLogForDay = watchEntriesByLogForDay,
-        _getWorkoutsByIds = getWorkoutsByIds,
-        _getSessionsByIds = getSessionsByIds,
-        super(const DailyDetailsInitial()) {
+  }) : _watchLogsForDay = watchLogsForDay,
+       _watchEntriesByLogForDay = watchEntriesByLogForDay,
+       _getWorkoutsByIds = getWorkoutsByIds,
+       _getSessionsByIds = getSessionsByIds,
+       super(const DailyDetailsInitial()) {
     on<DaySelectedEvent>(_onDaySelected);
     on<LogsReceivedEvent>(_onLogsReceived);
     on<EntriesReceivedEvent>(_onEntriesReceived);
@@ -46,7 +45,7 @@ class DailyDetailsBloc
 
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _logsSub;
   StreamSubscription<Either<Failure, Map<int, List<WorkoutLogEntry>>>>?
-      _entriesSub;
+  _entriesSub;
   DateTime? _activeDate;
 
   /// Latest snapshot of all four data sources keyed by date.
@@ -70,7 +69,8 @@ class DailyDetailsBloc
     _sessionsById = const {};
     _gotLogs = false;
     _gotEntries = false;
-    _resolved = false;
+    _requestedWorkoutIds.clear();
+    _requestedSessionIds.clear();
 
     await _logsSub?.cancel();
     await _entriesSub?.cancel();
@@ -79,23 +79,19 @@ class DailyDetailsBloc
 
     emit(DailyDetailsLoading(date: day));
 
-    _logsSub = _watchLogsForDay(day).listen(
-      (result) {
-        result.fold(
-          (failure) => add(DetailsErrorEvent(failure)),
-          (logs) => add(LogsReceivedEvent(logs)),
-        );
-      },
-    );
+    _logsSub = _watchLogsForDay(day).listen((result) {
+      result.fold(
+        (failure) => add(DetailsErrorEvent(failure)),
+        (logs) => add(LogsReceivedEvent(logs)),
+      );
+    });
 
-    _entriesSub = _watchEntriesByLogForDay(day).listen(
-      (result) {
-        result.fold(
-          (failure) => add(DetailsErrorEvent(failure)),
-          (entries) => add(EntriesReceivedEvent(entries)),
-        );
-      },
-    );
+    _entriesSub = _watchEntriesByLogForDay(day).listen((result) {
+      result.fold(
+        (failure) => add(DetailsErrorEvent(failure)),
+        (entries) => add(EntriesReceivedEvent(entries)),
+      );
+    });
   }
 
   void _onLogsReceived(
@@ -122,7 +118,7 @@ class DailyDetailsBloc
     WorkoutsReceivedEvent event,
     Emitter<DailyDetailsState> emit,
   ) {
-    _workoutsById = event.workoutsById;
+    _workoutsById = {..._workoutsById, ...event.workoutsById};
     _emitCurrent(emit);
   }
 
@@ -130,7 +126,7 @@ class DailyDetailsBloc
     SessionsReceivedEvent event,
     Emitter<DailyDetailsState> emit,
   ) {
-    _sessionsById = event.sessionsById;
+    _sessionsById = {..._sessionsById, ...event.sessionsById};
     _emitCurrent(emit);
   }
 
@@ -138,37 +134,43 @@ class DailyDetailsBloc
     emit(DailyDetailsError(event.failure));
   }
 
-  /// Triggers lazy lookup of workout/session names the first time we see
-  /// the entries for the day. Runs at most once per DaySelectedEvent.
-  bool _resolved = false;
+  /// Track which IDs we have already requested to avoid redundant lookups.
+  final Set<int> _requestedWorkoutIds = {};
+  final Set<int> _requestedSessionIds = {};
 
   Future<void> _resolveLookups() async {
-    if (_resolved) return;
-    if (_logs.isEmpty) {
-      // No logs yet — wait for both logs and entries to be empty.
-      return;
-    }
-    _resolved = true;
-
     final workoutIds = <int>{};
     for (final entries in _entriesByLog.values) {
       for (final e in entries) {
-        workoutIds.add(e.workoutId);
+        if (!_workoutsById.containsKey(e.workoutId) &&
+            !_requestedWorkoutIds.contains(e.workoutId)) {
+          workoutIds.add(e.workoutId);
+        }
       }
     }
-    final sessionIds = <int>{for (final l in _logs) l.sessionId};
+
+    final sessionIds = <int>{};
+    for (final l in _logs) {
+      if (!_sessionsById.containsKey(l.sessionId) &&
+          !_requestedSessionIds.contains(l.sessionId)) {
+        sessionIds.add(l.sessionId);
+      }
+    }
 
     if (workoutIds.isNotEmpty) {
+      _requestedWorkoutIds.addAll(workoutIds);
       final r = await _getWorkoutsByIds(workoutIds.toList());
       r.fold(
-        (_) {},
+        (_) => _requestedWorkoutIds.removeAll(workoutIds),
         (map) => add(WorkoutsReceivedEvent(map)),
       );
     }
+
     if (sessionIds.isNotEmpty) {
+      _requestedSessionIds.addAll(sessionIds);
       final r = await _getSessionsByIds(sessionIds.toList());
       r.fold(
-        (_) {},
+        (_) => _requestedSessionIds.removeAll(sessionIds),
         (map) => add(SessionsReceivedEvent(map)),
       );
     }
@@ -190,17 +192,18 @@ class DailyDetailsBloc
 
     final groups = <DailyLogGroup>[];
     for (final log in _logs) {
-      groups.add(DailyLogGroup(
-        log: log,
-        entries: _entriesByLog[log.id] ?? const [],
-      ));
+      groups.add(
+        DailyLogGroup(log: log, entries: _entriesByLog[log.id] ?? const []),
+      );
     }
-    emit(DailyDetailsLoaded(
-      date: date,
-      groups: groups,
-      workoutsById: _workoutsById,
-      sessionsById: _sessionsById,
-    ));
+    emit(
+      DailyDetailsLoaded(
+        date: date,
+        groups: groups,
+        workoutsById: _workoutsById,
+        sessionsById: _sessionsById,
+      ),
+    );
   }
 
   @override

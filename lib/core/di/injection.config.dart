@@ -1,14 +1,23 @@
 import 'package:get_it/get_it.dart';
 
+import '../../features/auth/data/auth_repository_impl.dart';
+import '../../features/auth/data/auth_service.dart';
+import '../../features/auth/domain/repositories/auth_repository.dart';
 import '../../features/calendar/presentation/bloc/calendar_bloc.dart';
 import '../../features/calendar/presentation/bloc/daily_details_bloc.dart';
+import '../../features/history/data/datasources/freeze_local_datasource.dart';
 import '../../features/history/data/datasources/history_local_datasource.dart';
+import '../../features/history/data/repositories/freeze_repository_impl.dart';
 import '../../features/history/data/repositories/history_repository_impl.dart';
+import '../../features/history/domain/repositories/freeze_repository.dart';
 import '../../features/history/domain/repositories/history_repository.dart';
 import '../../features/history/domain/usecases/get_workouts_by_ids.dart';
+import '../../features/history/domain/usecases/set_day_frozen.dart';
 import '../../features/history/domain/usecases/watch_entries_by_log_for_day.dart';
+import '../../features/history/domain/usecases/watch_frozen_days.dart';
 import '../../features/history/domain/usecases/watch_logs_for_day.dart';
 import '../../features/history/domain/usecases/watch_logs_in_range.dart';
+import '../../features/profile/data/profile_service.dart';
 import '../../features/session/data/datasources/session_local_datasource.dart';
 import '../../features/session/data/repositories/session_repository_impl.dart';
 import '../../features/session/domain/repositories/session_repository.dart';
@@ -20,6 +29,10 @@ import '../../features/session/domain/usecases/get_sessions_by_ids.dart';
 import '../../features/session/domain/usecases/update_session.dart';
 import '../../features/session/domain/usecases/watch_sessions.dart';
 import '../../features/session/presentation/bloc/session_bloc.dart';
+import '../../features/settings/data/notification_service.dart';
+import '../../features/settings/data/settings_service.dart';
+import '../../features/settings/data/theme_service.dart';
+import '../../features/today/presentation/bloc/today_workouts_bloc.dart';
 import '../../features/workout/data/datasources/workout_local_datasource.dart';
 import '../../features/workout/data/repositories/workout_repository_impl.dart';
 import '../../features/workout/domain/repositories/workout_repository.dart';
@@ -39,11 +52,12 @@ import '../../features/workout_log/domain/usecases/get_or_create_today_log.dart'
 import '../../features/workout_log/domain/usecases/upsert_entry.dart';
 import '../../features/workout_log/domain/usecases/watch_today_entries_by_workout.dart';
 import '../../features/workout_log/presentation/bloc/workout_tracking_bloc.dart';
-import '../../features/today/presentation/bloc/today_workouts_bloc.dart';
+import '../database/daos/auth_dao.dart';
 import '../database/daos/session_dao.dart';
 import '../database/daos/session_workout_dao.dart';
 import '../database/daos/workout_dao.dart';
 import '../database/daos/workout_log_dao.dart';
+import '../database/daos/workout_log_freeze_dao.dart';
 import 'service_locator.dart';
 
 /// Static registration helpers. Called from `injection.dart`.
@@ -55,13 +69,15 @@ extension InjectionConfig on GetIt {
   void registerCore() {
     registerLazySingleton<WorkoutDao>(() => WorkoutDao(getIt()));
     registerLazySingleton<WorkoutLogDao>(() => WorkoutLogDao(getIt()));
+    registerLazySingleton<AuthDao>(() => AuthDao(getIt()));
+    registerLazySingleton<WorkoutLogFreezeDao>(
+      () => WorkoutLogFreezeDao(getIt()),
+    );
   }
 
   void registerSessionFeature() {
     registerLazySingleton<SessionDao>(() => SessionDao(getIt()));
-    registerLazySingleton<SessionWorkoutDao>(
-      () => SessionWorkoutDao(getIt()),
-    );
+    registerLazySingleton<SessionWorkoutDao>(() => SessionWorkoutDao(getIt()));
 
     registerLazySingleton<SessionLocalDataSource>(
       () => SessionLocalDataSource(dao: getIt()),
@@ -71,9 +87,7 @@ extension InjectionConfig on GetIt {
       () => SessionRepositoryImpl(dataSource: getIt()),
     );
 
-    registerLazySingleton<GetSessions>(
-      () => GetSessions(repository: getIt()),
-    );
+    registerLazySingleton<GetSessions>(() => GetSessions(repository: getIt()));
     registerLazySingleton<WatchSessions>(
       () => WatchSessions(repository: getIt()),
     );
@@ -164,12 +178,8 @@ extension InjectionConfig on GetIt {
     registerLazySingleton<WatchTodayEntriesByWorkout>(
       () => WatchTodayEntriesByWorkout(repository: getIt()),
     );
-    registerLazySingleton<UpsertEntry>(
-      () => UpsertEntry(repository: getIt()),
-    );
-    registerLazySingleton<DeleteEntry>(
-      () => DeleteEntry(repository: getIt()),
-    );
+    registerLazySingleton<UpsertEntry>(() => UpsertEntry(repository: getIt()));
+    registerLazySingleton<DeleteEntry>(() => DeleteEntry(repository: getIt()));
     registerLazySingleton<GetLastEntriesForWorkouts>(
       () => GetLastEntriesForWorkouts(repository: getIt()),
     );
@@ -213,6 +223,20 @@ extension InjectionConfig on GetIt {
     registerLazySingleton<GetWorkoutsByIds>(
       () => GetWorkoutsByIds(repository: getIt()),
     );
+
+    // Freeze sub-feature
+    registerLazySingleton<FreezeLocalDataSource>(
+      () => FreezeLocalDataSource(dao: getIt()),
+    );
+    registerLazySingleton<FreezeRepository>(
+      () => FreezeRepositoryImpl(dataSource: getIt()),
+    );
+    registerLazySingleton<WatchFrozenDays>(
+      () => WatchFrozenDays(repository: getIt()),
+    );
+    registerLazySingleton<SetDayFrozen>(
+      () => SetDayFrozen(repository: getIt()),
+    );
   }
 
   void registerCalendarFeature() {
@@ -237,5 +261,19 @@ extension InjectionConfig on GetIt {
         watchWorkoutsForSession: getIt(),
       ),
     );
+  }
+
+  void registerAuthFeature() {
+    registerLazySingleton<AuthRepository>(
+      () => AuthRepositoryImpl(dao: getIt()),
+    );
+    registerLazySingleton<AuthService>(() => AuthService(repository: getIt()));
+  }
+
+  void registerSettingsFeature() {
+    registerLazySingleton<ProfileService>(() => ProfileService());
+    registerLazySingleton<SettingsService>(() => SettingsService());
+    registerLazySingleton<ThemeService>(() => ThemeService());
+    registerLazySingleton<NotificationService>(() => NotificationService());
   }
 }

@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Required by flutter_local_notifications to schedule exact-time
+         reminders on Android 12+ (API 31+). Without these the system
+         silently drops scheduled alarms and the "Alarms & reminders"
+         toggle in Settings is rendered disabled. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <application
         android:label="fitness_diary"
         android:name="${applicationName}"
@@ -30,6 +37,20 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Receivers used by flutter_local_notifications to deliver
+             scheduled notifications and to re-arm alarms after a device
+             reboot. Must be declared by the host app on Android 12+ -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

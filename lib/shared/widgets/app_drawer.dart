@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routes/route_paths.dart';
-import '../../core/theme/app_icon_size.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 import '../../l10n/app_localizations.dart';
 
-/// Primary navigation destinations used by both [AppDrawer] and
-/// [AppNavigationRail].
+/// Primary navigation destinations used by [AppNavigationRail].
 class _NavDest {
   const _NavDest({
     required this.icon,
@@ -66,87 +64,6 @@ List<_NavDest> _destinationsFor(BuildContext context) {
   ];
 }
 
-/// Drawer used in compact layouts. Triggered via the hamburger button.
-class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final destinations = _destinationsFor(context);
-    final currentRoute = GoRouterState.of(context).uri.path;
-    final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
-
-    return Drawer(
-      child: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.lg,
-                vertical: AppSpacing.xl,
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      gradient: AppTheme.heroGradient,
-                      borderRadius: BorderRadius.all(
-                        Radius.circular(AppRadius.md),
-                      ),
-                    ),
-                    child: Icon(
-                      Icons.fitness_center_rounded,
-                      size: AppIconSize.md,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Text(
-                      l10n.appTitle,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm,
-                  vertical: AppSpacing.sm,
-                ),
-                children: [
-                  for (final dest in destinations)
-                    _NavTile(
-                      dest: dest,
-                      selected: currentRoute.startsWith(dest.route),
-                      onTap: () {
-                        final navigator = Navigator.of(context);
-                        if (navigator.canPop()) {
-                          navigator.pop();
-                        }
-                        context.go(dest.route);
-                      },
-                    ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Persistent rail used in medium / expanded layouts by [AppScaffold].
 class AppNavigationRail extends StatelessWidget {
   const AppNavigationRail({super.key});
@@ -169,28 +86,38 @@ class AppNavigationRail extends StatelessWidget {
       onDestinationSelected: (index) {
         context.go(destinations[index].route);
       },
-      leading: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-        child: Container(
-          width: 40,
-          height: 40,
-          margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-          decoration: const BoxDecoration(
-            gradient: AppTheme.heroGradient,
-            borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x406366F1),
-                blurRadius: 10,
-                offset: Offset(0, 6),
+      leading: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+            child: Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+              decoration: const BoxDecoration(
+                gradient: AppTheme.heroGradient,
+                borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x406366F1),
+                    blurRadius: 10,
+                    offset: Offset(0, 6),
+                  ),
+                ],
               ),
-            ],
+              child: const Icon(
+                Icons.fitness_center_rounded,
+                color: Colors.white,
+              ),
+            ),
           ),
-          child: const Icon(
-            Icons.fitness_center_rounded,
-            color: Colors.white,
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded),
+            onPressed: () => context.pushNamed(RouteNames.profile),
+            tooltip: 'Profile',
           ),
-        ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
       ),
       destinations: [
         for (final dest in destinations)
@@ -200,70 +127,6 @@ class AppNavigationRail extends StatelessWidget {
             label: Text(dest.label),
           ),
       ],
-    );
-  }
-}
-
-class _NavTile extends StatelessWidget {
-  const _NavTile({
-    required this.dest,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _NavDest dest;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.xs,
-        vertical: 2,
-      ),
-      child: Material(
-        color: selected
-            ? theme.colorScheme.primaryContainer
-            : Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  selected ? dest.selectedIcon : dest.icon,
-                  color: selected
-                      ? theme.colorScheme.onPrimaryContainer
-                      : theme.colorScheme.onSurfaceVariant,
-                  size: 22,
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Text(
-                    dest.label,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: selected
-                          ? theme.colorScheme.onPrimaryContainer
-                          : theme.colorScheme.onSurface,
-                      fontWeight:
-                          selected ? FontWeight.w600 : FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

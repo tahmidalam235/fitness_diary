@@ -16,6 +16,7 @@ import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
+import 'package:fitness_diary/features/today/presentation/bloc/today_workouts_bloc.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout/presentation/bloc/workout_list_bloc.dart';
 import '../../../workout/presentation/widgets/workout_card.dart';
@@ -54,6 +55,11 @@ class SessionDetailsPage extends StatelessWidget {
           create: (_) =>
               getIt<WorkoutListBloc>()..add(WatchWorkoutsEvent(sessionId)),
         ),
+        BlocProvider<TodayWorkoutsBloc>(
+          create: (_) =>
+              getIt<TodayWorkoutsBloc>()
+                ..add(WatchTodayWorkoutsEvent(sessionId)),
+        ),
       ],
       child: _SessionDetailsView(
         sessionId: sessionId,
@@ -66,7 +72,7 @@ class SessionDetailsPage extends StatelessWidget {
 class _SessionDetailsView extends StatefulWidget {
   const _SessionDetailsView({
     required this.sessionId,
-    this.autoEnterSelectMode = false,
+    required this.autoEnterSelectMode,
   });
 
   final int sessionId;
@@ -148,32 +154,26 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
             sets: prior?.sets ?? w.defaultSets,
             reps: prior?.reps ?? w.defaultReps,
             weight: prior?.weight ?? w.defaultWeight,
-            durationSeconds:
-                prior?.durationSeconds ?? w.defaultDurationSeconds,
+            durationSeconds: prior?.durationSeconds ?? w.defaultDurationSeconds,
           );
         }(),
     ];
 
     final addResult = await getIt<AddWorkoutsToToday>()(
-      AddWorkoutsToTodayParams(
-        sessionId: widget.sessionId,
-        entries: entries,
-      ),
+      AddWorkoutsToTodayParams(sessionId: widget.sessionId, entries: entries),
     );
 
     if (!mounted) return;
     addResult.fold(
       (failure) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
       },
       (_) {
         _exitSelectMode();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Added to today's session"),
-          ),
+          const SnackBar(content: Text("Added to today's session")),
         );
         context.goNamed(
           RouteNames.today,
@@ -205,8 +205,8 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
               // workouts (Loaded with empty list, or a hard error). While
               // loading or in any other transitional state we still
               // surface the button so the user can find it.
-              final hasNoWorkouts = state is WorkoutListLoaded &&
-                  state.workouts.isEmpty;
+              final hasNoWorkouts =
+                  state is WorkoutListLoaded && state.workouts.isEmpty;
               if (hasNoWorkouts) return const SizedBox.shrink();
               return FilledButton.tonalIcon(
                 onPressed: _enterSelectMode,
@@ -437,22 +437,31 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
               );
             }
             if (state is WorkoutListLoaded) {
-              return SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  0,
-                  AppSpacing.lg,
-                  AppSpacing.xxl,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: _WorkoutListSection(
-                    workouts: state.workouts,
-                    sessionId: widget.sessionId,
-                    selectedMasterWorkoutIds: _selected,
-                    selectMode: _selectMode,
-                    onToggleSelection: _toggle,
-                  ),
-                ),
+              return BlocBuilder<TodayWorkoutsBloc, TodayWorkoutsState>(
+                builder: (context, todayState) {
+                  final trackedIds = todayState is TodayWorkoutsLoaded
+                      ? todayState.entries.map((e) => e.workoutId).toSet()
+                      : <int>{};
+
+                  return SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      0,
+                      AppSpacing.lg,
+                      AppSpacing.xxl,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: _WorkoutListSection(
+                        workouts: state.workouts,
+                        sessionId: widget.sessionId,
+                        selectedMasterWorkoutIds: _selected,
+                        trackedWorkoutIds: trackedIds,
+                        selectMode: _selectMode,
+                        onToggleSelection: _toggle,
+                      ),
+                    ),
+                  );
+                },
               );
             }
             return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -491,6 +500,7 @@ class _WorkoutListSection extends StatelessWidget {
     required this.workouts,
     required this.sessionId,
     required this.selectedMasterWorkoutIds,
+    required this.trackedWorkoutIds,
     required this.selectMode,
     required this.onToggleSelection,
   });
@@ -498,6 +508,7 @@ class _WorkoutListSection extends StatelessWidget {
   final List<Workout> workouts;
   final int sessionId;
   final Set<int> selectedMasterWorkoutIds;
+  final Set<int> trackedWorkoutIds;
   final bool selectMode;
   final ValueChanged<int> onToggleSelection;
 
@@ -573,8 +584,10 @@ class _WorkoutListSection extends StatelessWidget {
           },
           itemBuilder: (context, index) {
             final w = workouts[index];
+            final isTracked = trackedWorkoutIds.contains(w.workoutId);
             final selected =
-                selectedMasterWorkoutIds.contains(w.workoutId);
+                selectedMasterWorkoutIds.contains(w.workoutId) || isTracked;
+
             return Padding(
               key: ValueKey<int>(w.id),
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -591,16 +604,16 @@ class _WorkoutListSection extends StatelessWidget {
                           height: 32,
                           child: Checkbox(
                             value: selected,
-                            onChanged: (_) =>
-                                onToggleSelection(w.workoutId),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.padded,
+                            onChanged: isTracked
+                                ? null
+                                : (_) => onToggleSelection(w.workoutId),
+                            materialTapTargetSize: MaterialTapTargetSize.padded,
                           ),
                         ),
                       )
                     : null,
                 onTap: selectMode
-                    ? () => onToggleSelection(w.workoutId)
+                    ? (isTracked ? () {} : () => onToggleSelection(w.workoutId))
                     : () => context.pushNamed(
                         RouteNames.workoutTracking,
                         pathParameters: {
@@ -619,8 +632,7 @@ class _WorkoutListSection extends StatelessWidget {
                       ),
                 onDelete: selectMode
                     ? () {}
-                    : () =>
-                        _confirmDelete(context, w.id, w.exerciseName),
+                    : () => _confirmDelete(context, w.id, w.exerciseName),
                 // Hide the drag handle in select mode so the checkbox has
                 // room and reorder isn't accidentally triggered.
                 dragHandle: selectMode

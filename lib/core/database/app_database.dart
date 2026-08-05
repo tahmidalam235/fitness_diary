@@ -5,13 +5,17 @@ import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'daos/auth_dao.dart';
 import 'daos/session_dao.dart';
 import 'daos/session_workout_dao.dart';
 import 'daos/workout_dao.dart';
 import 'daos/workout_log_dao.dart';
+import 'daos/workout_log_freeze_dao.dart';
 import 'tables/session_workouts_table.dart';
 import 'tables/sessions_table.dart';
+import 'tables/users_table.dart';
 import 'tables/workout_log_entries_table.dart';
+import 'tables/workout_log_freezes_table.dart';
 import 'tables/workout_logs_table.dart';
 import 'tables/workouts_table.dart';
 
@@ -43,9 +47,26 @@ part 'app_database.g.dart';
 ///       carry the number of sets completed alongside reps/weight/
 ///       duration. Existing rows are left NULL — prefill logic uses the
 ///       session template defaults when NULL.
+///   v8: adds `users` table for on-device auth.
+///   v9: adds `workout_log_freezes` table for streak preservation.
 @DriftDatabase(
-  tables: [Sessions, Workouts, SessionWorkouts, WorkoutLogs, WorkoutLogEntries],
-  daos: [SessionDao, WorkoutDao, SessionWorkoutDao, WorkoutLogDao],
+  tables: [
+    Sessions,
+    Workouts,
+    SessionWorkouts,
+    WorkoutLogs,
+    WorkoutLogEntries,
+    Users,
+    WorkoutLogFreezes,
+  ],
+  daos: [
+    SessionDao,
+    WorkoutDao,
+    SessionWorkoutDao,
+    WorkoutLogDao,
+    AuthDao,
+    WorkoutLogFreezeDao,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
@@ -55,7 +76,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -83,6 +104,20 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 7) {
         await m.addColumn(workoutLogEntries, workoutLogEntries.sets);
+      }
+      if (from < 8) {
+        await m.createTable(users);
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username '
+          'ON users (username)',
+        );
+      }
+      if (from < 9) {
+        await m.createTable(workoutLogFreezes);
+        await customStatement(
+          'CREATE UNIQUE INDEX IF NOT EXISTS idx_freezes_day '
+          'ON workout_log_freezes (day)',
+        );
       }
     },
   );

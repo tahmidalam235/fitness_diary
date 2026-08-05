@@ -28,6 +28,12 @@ dependencies:
   get_it: ^8.2.0
   intl: ^0.20.2
   gap: ^3.0.1
+  shared_preferences: ^2.5.2
+  crypto: ^3.0.6
+  share_plus: ^10.1.4
+  flutter_local_notifications: ^18.0.1
+  flutter_timezone: ^4.1.1
+  timezone: ^0.10.0
 
 dependency_overrides:
   path_provider_android: 2.2.15
@@ -47,3 +53,4 @@ flutter:
 
   assets:
     - assets/images/
+    - assets/logo/

@@ -6,6 +6,7 @@ import '../../core/theme/app_spacing.dart';
 import '../responsive/responsive_builder.dart';
 import '../responsive/screen_size.dart';
 import 'app_drawer.dart';
+import 'app_overflow_menu.dart';
 
 /// Top-level destinations in the same order they appear in
 /// [AppDrawer]/[AppNavigationRail]. Used by the back-arrow leading
@@ -40,6 +41,7 @@ class AppScaffold extends StatelessWidget {
     this.bottomNavigationBar,
     this.useNavigationRail = false,
     this.showBackButton = false,
+    this.titleLeadingIcon = false,
     super.key,
   });
 
@@ -48,6 +50,10 @@ class AppScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
+
+  /// When true, the AppBar's title is prefixed with a small branded app
+  /// icon to reinforce product identity on top-level destinations.
+  final bool titleLeadingIcon;
 
   /// When true, the scaffold renders a permanent [AppDrawer] (compact) or
   /// a persistent [NavigationRail] (medium/expanded).
@@ -103,16 +109,47 @@ class AppScaffold extends StatelessWidget {
     context.go(_kDrawerRoutes[fallbackIndex]);
   }
 
+  List<Widget> _buildActions(BuildContext context) {
+    final currentPath = GoRouterState.of(context).uri.path;
+    final isProfile = currentPath.startsWith(RoutePaths.profile);
+
+    return [
+      ...?actions,
+      if (!isProfile) const _ProfileActionButton(),
+      const AppOverflowMenu(),
+    ];
+  }
+
+  /// AppBar title widget. When [titleLeadingIcon] is true, prepends the
+  /// branded app logo (from `assets/logo/`) to the title text.
+  Widget _buildTitle(BuildContext context) {
+    if (!titleLeadingIcon) return Text(title);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Image.asset(
+          'assets/logo/fitness_diary_compact.png',
+          height: 28,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(width: AppSpacing.sm),
+        Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final leading = _buildLeading(context);
+    final finalActions = _buildActions(context);
+
     if (!useNavigationRail) {
       return Scaffold(
         appBar: AppBar(
-          title: Text(title),
-          actions: actions,
+          title: _buildTitle(context),
+          actions: finalActions,
           leading: leading,
-          automaticallyImplyLeading: false,
+          automaticallyImplyLeading: leading == null,
         ),
         body: body,
         floatingActionButton: floatingActionButton,
@@ -127,10 +164,10 @@ class AppScaffold extends StatelessWidget {
         if (size.isMediumOrLarger) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(title),
-              actions: actions,
+              title: _buildTitle(context),
+              actions: finalActions,
               leading: leading,
-              automaticallyImplyLeading: false,
+              automaticallyImplyLeading: leading == null,
             ),
             body: Row(
               children: [
@@ -151,20 +188,100 @@ class AppScaffold extends StatelessWidget {
         final canPop = context.canPop();
         return Scaffold(
           appBar: AppBar(
-            title: Text(title),
-            actions: actions,
+            title: _buildTitle(context),
+            actions: finalActions,
             leading: leading,
-            automaticallyImplyLeading: false,
+            automaticallyImplyLeading: leading == null,
           ),
-          drawer: canPop ? null : const AppDrawer(),
           body: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),
             child: body,
           ),
           floatingActionButton: floatingActionButton,
-          bottomNavigationBar: bottomNavigationBar,
+          bottomNavigationBar:
+              bottomNavigationBar ??
+              (canPop ? null : const _QuickActionsNavBar()),
         );
       },
+    );
+  }
+}
+
+class _ProfileActionButton extends StatelessWidget {
+  const _ProfileActionButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: IconButton(
+        icon: const Icon(Icons.account_circle_outlined),
+        onPressed: () => context.pushNamed(RouteNames.profile),
+        tooltip: 'Profile',
+      ),
+    );
+  }
+}
+
+class _QuickActionsNavBar extends StatelessWidget {
+  const _QuickActionsNavBar();
+
+  @override
+  Widget build(BuildContext context) {
+    final currentPath = GoRouterState.of(context).uri.path;
+
+    // Map paths to tab index
+    int selectedIndex = 0;
+    if (currentPath.startsWith(RoutePaths.today)) {
+      selectedIndex = 0;
+    } else if (currentPath.startsWith(RoutePaths.calendar)) {
+      selectedIndex = 1;
+    } else if (currentPath.startsWith(RoutePaths.sessions)) {
+      selectedIndex = 2;
+    } else if (currentPath.startsWith(RoutePaths.dashboard)) {
+      selectedIndex = 3;
+    }
+
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: (index) {
+        switch (index) {
+          case 0:
+            context.go(RoutePaths.today);
+            break;
+          case 1:
+            context.go(RoutePaths.calendar);
+            break;
+          case 2:
+            context.go(RoutePaths.sessions);
+            break;
+          case 3:
+            context.go(RoutePaths.dashboard);
+            break;
+        }
+      },
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(Icons.play_circle_outline_rounded),
+          selectedIcon: Icon(Icons.play_circle_filled_rounded),
+          label: 'Today',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.calendar_month_outlined),
+          selectedIcon: Icon(Icons.calendar_month_rounded),
+          label: 'Calendar',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.style_outlined),
+          selectedIcon: Icon(Icons.style_rounded),
+          label: 'Sessions',
+        ),
+        NavigationDestination(
+          icon: Icon(Icons.bar_chart_outlined),
+          selectedIcon: Icon(Icons.bar_chart_rounded),
+          label: 'Stats',
+        ),
+      ],
     );
   }
 }

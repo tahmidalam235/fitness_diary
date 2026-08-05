@@ -74,6 +74,7 @@ class _SessionsViewState extends State<_SessionsView> {
     return AppScaffold(
       title: l10n.sessionsTitle,
       useNavigationRail: true,
+      titleLeadingIcon: true,
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.pushNamed(RouteNames.sessionNew),
         icon: const Icon(Icons.add_rounded),

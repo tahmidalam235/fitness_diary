@@ -192,6 +192,7 @@
 
   "workoutsTitle": "Workout Library",
   "workoutsComingSoon": "The workout library is coming soon.",
+  "workoutsSubtitle": "Browse every exercise across your sessions",
 
   "workoutAddTitle": "Add Workout",
   "workoutEditTitle": "Edit Workout",
@@ -242,5 +243,36 @@
   "workoutActionReorder": "Reorder",
 
   "routerErrorTitle": "Page not found",
-  "routerErrorMessage": "The requested page does not exist."
+  "routerErrorMessage": "The requested page does not exist.",
+
+  "authLoginTitle": "Welcome back",
+  "authLoginSubtitle": "Sign in to continue your journey.",
+  "authUsername": "Username",
+  "authPassword": "Password",
+  "authPasswordRule": "At least 8 characters",
+  "authLoginButton": "Sign In",
+  "authNoAccount": "Don't have an account? Sign up",
+  "authSignupTitle": "Create Account",
+  "authSignupSubtitle": "Start tracking your fitness today.",
+  "authUsernameRule": "3-32 characters",
+  "authConfirmPassword": "Confirm Password",
+  "authDisplayName": "Display Name",
+  "authEmail": "Email Address",
+  "authSignupButton": "Create Account",
+  "authHasAccount": "Already have an account? Sign in",
+  "authInvalidCredentials": "Invalid username or password",
+  "authUsernameTaken": "Username is already taken",
+  "authLogout": "Log Out",
+  "authLogoutConfirm": "Log out?",
+  "authLogoutConfirmBody": "Are you sure you want to log out of your account?",
+
+  "profileTitle": "Profile",
+
+  "historyFreezeTitle": "Streak Freeze",
+  "historyFreezeHelp": "Freeze a day to preserve your streak when you can't train.",
+  "historyFreezeEmpty": "No freezes applied yet.",
+  "historyCompareTitle": "Compare Progress",
+  "historyCompareRangeA": "First Period",
+  "historyCompareRangeB": "Second Period",
+  "historyPeriodEmpty": "No data for this period."
 }
