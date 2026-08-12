@@ -4,6 +4,7 @@ import 'package:gap/gap.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../workout/domain/entities/body_part.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
 
 /// Compact key-value tile for a single set on the Daily Details page.
@@ -14,11 +15,17 @@ class DaySetSummaryTile extends StatelessWidget {
   const DaySetSummaryTile({
     required this.entry,
     required this.workoutName,
+    this.targetedBodyPart,
     super.key,
   });
 
   final WorkoutLogEntry entry;
   final String workoutName;
+
+  /// Optional body part the workout targets. When non-null a small
+  /// icon + label chip is added alongside the existing chips so the
+  /// user can see which muscle group the exercise belongs to.
+  final BodyPart? targetedBodyPart;
 
   String _formatDuration(int seconds) {
     return '${(seconds / 60).round()}m';
@@ -55,6 +62,11 @@ class DaySetSummaryTile extends StatelessWidget {
           label: l10n.dailyDetailsDuration,
           value: _formatDuration(entry.durationSeconds!),
         ),
+      );
+    }
+    if (targetedBodyPart != null) {
+      chips.add(
+        _BodyPartChip(bodyPart: targetedBodyPart!),
       );
     }
 
@@ -131,6 +143,51 @@ class _Chip extends StatelessWidget {
         style: theme.textTheme.labelSmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
+      ),
+    );
+  }
+}
+
+/// Small chip showing the workout's targeted body part. Distinct from
+/// the label/value `_Chip` because it carries an icon + a coloured
+/// tinted background to match the body-part chip on the workout card.
+class _BodyPartChip extends StatelessWidget {
+  const _BodyPartChip({required this.bodyPart});
+
+  final BodyPart bodyPart;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: 2,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(
+          color: theme.colorScheme.primary.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            bodyPart.icon,
+            size: 12,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+          const Gap(AppSpacing.xxs),
+          Text(
+            bodyPart.label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }

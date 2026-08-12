@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/either.dart';
+import '../../domain/entities/body_part.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/usecases/add_workout.dart';
 import '../../domain/usecases/delete_workout.dart';
@@ -46,6 +47,7 @@ class AddWorkoutEvent extends WorkoutListEvent {
     this.defaultDurationSeconds,
     this.defaultWeight,
     this.notes = '',
+    this.targetedBodyPart,
   });
 
   final int sessionId;
@@ -55,6 +57,7 @@ class AddWorkoutEvent extends WorkoutListEvent {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final BodyPart? targetedBodyPart;
 
   @override
   List<Object?> get props => [
@@ -65,6 +68,7 @@ class AddWorkoutEvent extends WorkoutListEvent {
     defaultDurationSeconds,
     defaultWeight,
     notes,
+    targetedBodyPart,
   ];
 }
 
@@ -77,6 +81,7 @@ class UpdateWorkoutEvent extends WorkoutListEvent {
     this.defaultDurationSeconds,
     this.defaultWeight,
     this.notes = '',
+    this.targetedBodyPart,
   });
 
   final int id;
@@ -86,6 +91,7 @@ class UpdateWorkoutEvent extends WorkoutListEvent {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final BodyPart? targetedBodyPart;
 
   @override
   List<Object?> get props => [
@@ -96,6 +102,7 @@ class UpdateWorkoutEvent extends WorkoutListEvent {
     defaultDurationSeconds,
     defaultWeight,
     notes,
+    targetedBodyPart,
   ];
 }
 
@@ -273,6 +280,7 @@ class WorkoutListBloc extends Bloc<WorkoutListEvent, WorkoutListState> {
         defaultDurationSeconds: event.defaultDurationSeconds,
         defaultWeight: event.defaultWeight,
         notes: event.notes,
+        targetedBodyPart: event.targetedBodyPart,
       ),
     );
     result.fold((failure) {
@@ -295,6 +303,7 @@ class WorkoutListBloc extends Bloc<WorkoutListEvent, WorkoutListState> {
         defaultDurationSeconds: event.defaultDurationSeconds,
         defaultWeight: event.defaultWeight,
         notes: event.notes,
+        targetedBodyPart: event.targetedBodyPart,
       ),
     );
     result.fold((failure) {

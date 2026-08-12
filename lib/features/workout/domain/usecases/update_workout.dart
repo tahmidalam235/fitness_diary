@@ -1,6 +1,7 @@
 import '../../../../core/error/failure.dart';
 import '../../../../core/usecase/usecase.dart';
 import '../../../../core/utils/either.dart';
+import '../entities/body_part.dart';
 import '../entities/workout.dart';
 import '../repositories/workout_repository.dart';
 
@@ -13,6 +14,7 @@ class UpdateWorkoutParams {
     this.defaultDurationSeconds,
     this.defaultWeight,
     this.notes = '',
+    this.targetedBodyPart,
   });
 
   final int id;
@@ -22,6 +24,7 @@ class UpdateWorkoutParams {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final BodyPart? targetedBodyPart;
 }
 
 class UpdateWorkout extends UseCase<Workout, UpdateWorkoutParams> {
@@ -73,6 +76,7 @@ class UpdateWorkout extends UseCase<Workout, UpdateWorkoutParams> {
       defaultDurationSeconds: params.defaultDurationSeconds,
       defaultWeight: params.defaultWeight,
       notes: params.notes.trim(),
+      targetedBodyPart: params.targetedBodyPart,
     );
   }
 }

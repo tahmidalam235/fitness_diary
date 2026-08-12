@@ -163,6 +163,13 @@ class NotificationService {
             category: AndroidNotificationCategory.reminder,
             visibility: NotificationVisibility.public,
             showWhen: true,
+            // Status-bar (small) icon — a monochrome silhouette of the
+            // Fitness Diary dumbbell brand mark. Android renders it as
+            // white-on-transparent in the status bar; without an
+            // explicit `icon` it falls back to the launcher mipmap,
+            // which on Android 5+ becomes a white square when the
+            // launcher icon isn't monochrome.
+            icon: '@drawable/ic_notification',
           ),
           iOS: DarwinNotificationDetails(
             presentAlert: true,
@@ -263,6 +270,7 @@ class NotificationService {
           priority: Priority.max,
           showWhen: true,
           fullScreenIntent: false,
+          icon: '@drawable/ic_notification',
         ),
         iOS: DarwinNotificationDetails(
           presentAlert: true,

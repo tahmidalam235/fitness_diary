@@ -85,6 +85,8 @@ class DayLogCard extends StatelessWidget {
                 entry: entry.value.first,
                 workoutName:
                     workoutsById[entry.key]?.exerciseName ?? '',
+                targetedBodyPart:
+                    workoutsById[entry.key]?.targetedBodyPart,
               ),
             if (sections.isEmpty)
               Padding(

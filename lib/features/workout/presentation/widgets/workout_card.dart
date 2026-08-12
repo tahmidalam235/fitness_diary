@@ -82,6 +82,11 @@ class WorkoutCard extends StatelessWidget {
                         spacing: AppSpacing.xs,
                         runSpacing: AppSpacing.xxs,
                         children: [
+                          if (workout.targetedBodyPart != null)
+                            _Chip(
+                              icon: workout.targetedBodyPart!.icon,
+                              label: workout.targetedBodyPart!.label,
+                            ),
                           _Chip(
                             icon: Icons.format_list_numbered_rounded,
                             label: l10n.workoutListSetsReps(

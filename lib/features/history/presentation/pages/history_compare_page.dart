@@ -12,6 +12,7 @@ import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../calendar/presentation/widgets/month_year_picker.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
+import '../../../workout_log/data/models/workout_log_entry_model.dart';
 import '../../domain/usecases/watch_logs_in_range.dart';
 
 /// Full-screen "compare two time ranges" view.
@@ -233,13 +234,25 @@ class _RangeColumn extends StatelessWidget {
     return StreamBuilder<_RangeData>(
       stream: usecase(range).asyncMap((either) async {
         final logs = either.getOrElse((_) => const <WorkoutLog>[]);
-        int sets = 0;
+        // We need every recorded entry for every log in the range so
+        // we can compute:
+        //   * totalSets    → sum of each entry's `sets` value
+        //   * workoutCount → number of entries (individual workouts)
         final dao = getIt<WorkoutLogDao>();
+        final allEntries = <WorkoutLogEntryModel>[];
         for (final l in logs) {
           final entries = await dao.getEntriesForLogById(l.id);
-          sets += entries.length;
+          allEntries.addAll(entries);
         }
-        return _RangeData(logs: logs, totalSets: sets);
+        final totalSets = allEntries.fold<int>(
+          0,
+          (sum, e) => sum + (e.sets ?? 0),
+        );
+        return _RangeData(
+          logs: logs,
+          totalSets: totalSets,
+          workoutCount: allEntries.length,
+        );
       }),
       builder: (context, snap) {
         if (!snap.hasData) {
@@ -265,9 +278,17 @@ class _RangeColumn extends StatelessWidget {
 }
 
 class _RangeData {
-  const _RangeData({required this.logs, required this.totalSets});
+  const _RangeData({
+    required this.logs,
+    required this.totalSets,
+    required this.workoutCount,
+  });
   final List<WorkoutLog> logs;
   final int totalSets;
+
+  /// Count of individual workouts (entries) recorded in the range.
+  /// Distinct from [logs.length], which counts sessions.
+  final int workoutCount;
 }
 
 class _RangeSummary extends StatelessWidget {
@@ -295,7 +316,7 @@ class _RangeSummary extends StatelessWidget {
       children: [
         _KpiTile(
           label: 'Workouts',
-          value: '${logs.length}',
+          value: '${data.workoutCount}',
           accentColor: accentColor,
         ),
         const Gap(AppSpacing.sm),

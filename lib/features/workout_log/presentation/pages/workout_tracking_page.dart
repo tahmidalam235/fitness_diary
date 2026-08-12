@@ -12,8 +12,10 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../workout/domain/entities/body_part.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout/presentation/bloc/workout_list_bloc.dart';
+import '../../../workout/presentation/widgets/body_part_picker_sheet.dart';
 import '../../domain/entities/workout_log_entry.dart';
 import '../bloc/workout_tracking_bloc.dart';
 
@@ -88,14 +90,32 @@ class _WorkoutTrackingView extends StatelessWidget {
   }
 }
 
-class _Body extends StatelessWidget {
+class _Body extends StatefulWidget {
   const _Body({required this.workout});
 
   final Workout workout;
 
   @override
+  State<_Body> createState() => _BodyState();
+}
+
+class _BodyState extends State<_Body> {
+  // Holds the body-part selection made on this screen. Initialised
+  // from the workout template so a fresh open shows the saved value.
+  // The save ✓ button forwards this value (not the template value)
+  // so editing the body part here actually persists the change.
+  BodyPart? _selectedBodyPart;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedBodyPart = widget.workout.targetedBodyPart;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final workout = widget.workout;
 
     return AppScaffold(
       title: workout.exerciseName,
@@ -129,6 +149,10 @@ class _Body extends StatelessWidget {
                               entry.durationSeconds ?? w.defaultDurationSeconds,
                           defaultWeight: entry.weight ?? w.defaultWeight,
                           notes: w.notes,
+                          // Use the body-part picked on this screen (if
+                          // the user changed it), otherwise carry the
+                          // template value through unchanged.
+                          targetedBodyPart: _selectedBodyPart ?? w.targetedBodyPart,
                         ),
                       );
                       context.pop();
@@ -165,7 +189,16 @@ class _Body extends StatelessWidget {
             if (entry == null) {
               return const AppLoadingIndicator();
             }
-            return _SingleCardLayout(workout: workout, entry: entry);
+            return _SingleCardLayout(
+              workout: workout,
+              entry: entry,
+              selectedBodyPart: _selectedBodyPart,
+              onBodyPartChanged: (part) {
+                setState(() {
+                  _selectedBodyPart = part;
+                });
+              },
+            );
           }
           return const SizedBox.shrink();
         },
@@ -176,10 +209,17 @@ class _Body extends StatelessWidget {
 
 /// Gradient hero + single editable card layout.
 class _SingleCardLayout extends StatelessWidget {
-  const _SingleCardLayout({required this.workout, required this.entry});
+  const _SingleCardLayout({
+    required this.workout,
+    required this.entry,
+    required this.selectedBodyPart,
+    required this.onBodyPartChanged,
+  });
 
   final Workout workout;
   final WorkoutLogEntry entry;
+  final BodyPart? selectedBodyPart;
+  final ValueChanged<BodyPart?> onBodyPartChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -193,7 +233,12 @@ class _SingleCardLayout extends StatelessWidget {
       children: [
         _SummaryHero(workout: workout, entry: entry),
         const Gap(AppSpacing.md),
-        _TrackingCard(workout: workout, entry: entry),
+        _TrackingCard(
+          workout: workout,
+          entry: entry,
+          selectedBodyPart: selectedBodyPart,
+          onBodyPartChanged: onBodyPartChanged,
+        ),
       ],
     );
   }
@@ -331,14 +376,22 @@ class _HeroStat extends StatelessWidget {
 /// Single tracking card containing the four editable fields. All edits
 /// dispatch `UpsertTodayEntryEvent` and stream back via the bloc.
 class _TrackingCard extends StatelessWidget {
-  const _TrackingCard({required this.workout, required this.entry});
+  const _TrackingCard({
+    required this.workout,
+    required this.entry,
+    required this.selectedBodyPart,
+    required this.onBodyPartChanged,
+  });
 
   final Workout workout;
   final WorkoutLogEntry entry;
+  final BodyPart? selectedBodyPart;
+  final ValueChanged<BodyPart?> onBodyPartChanged;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     void upsert({int? sets, int? reps, double? weight, int? durationSeconds}) {
       context.read<WorkoutTrackingBloc>().add(
@@ -394,6 +447,85 @@ class _TrackingCard extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+            const Gap(AppSpacing.md),
+            // Targeted Body Part field — tapping opens the bottom-sheet
+            // picker. Selection is held in `_BodyState`; on ✓ save it
+            // is forwarded to `UpdateWorkoutEvent.targetedBodyPart` so
+            // the workout template (and Session card) reflects it.
+            Material(
+              color: theme.colorScheme.surfaceContainerHighest
+                  .withValues(alpha: 0.45),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () async {
+                  final picked = await BodyPartPickerSheet.show(
+                    context,
+                    initial: selectedBodyPart,
+                  );
+                  if (!context.mounted) return;
+                  // The picker returns null both for "user dismissed" and
+                  // "user tapped Clear". We treat any return as an
+                  // explicit choice and propagate it so the next save
+                  // reflects the user's intent.
+                  onBodyPartChanged(picked);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        selectedBodyPart?.icon ??
+                            Icons.add_circle_outline_rounded,
+                        size: 20,
+                        color: selectedBodyPart != null
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      const Gap(AppSpacing.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.workoutFieldTargetedBodyPart
+                                  .toUpperCase(),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color:
+                                    theme.colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 9,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            const Gap(2),
+                            Text(
+                              selectedBodyPart?.label ??
+                                  l10n.workoutTargetedBodyPartEmpty,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: selectedBodyPart != null
+                                    ? FontWeight.w600
+                                    : FontWeight.w500,
+                                color: selectedBodyPart != null
+                                    ? theme.colorScheme.onSurface
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right_rounded,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
             const Gap(AppSpacing.md),
             Row(

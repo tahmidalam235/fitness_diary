@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome silhouette for the Android status-bar notification icon.
+  Drawn from scratch as a vector so it stays sharp at every density
+  (mdpi 24px → xxxhdpi 96px). The system tints it white automatically;
+  any non-transparent color here is irrelevant at runtime — Android
+  only reads the alpha channel for status-bar icons and renders the
+  rest as white.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+
+    <!-- Stylized dumbbell silhouette derived from the Fitness Diary
+         brand mark. Two end weights + a connecting bar, all in a
+         single white path on a transparent background. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,7.5 L3,10.5 L5,10.5 L5,13.5 L3,13.5 L3,16.5 L6,16.5 L6,7.5 Z M7,9 L7,15 L17,15 L17,9 Z M18,7.5 L18,16.5 L21,16.5 L21,13.5 L19,13.5 L19,10.5 L21,10.5 L21,7.5 Z" />
+</vector>

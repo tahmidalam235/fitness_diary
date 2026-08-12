@@ -1,7 +1,7 @@
-import '../../sync/firestore_id.dart';
-import '../../sync/sync_service.dart';
 import '../../../features/workout_log/data/models/workout_log_entry_model.dart';
 import '../../../features/workout_log/data/models/workout_log_model.dart';
+import '../../sync/firestore_id.dart';
+import '../../sync/sync_service.dart';
 
 /// Firestore-backed replacement for the old Drift `WorkoutLogDao`.
 ///
@@ -27,9 +27,7 @@ class WorkoutLogDao {
   /// placeholder `1` so the call shape matches the old Drift API.
   Future<int> insertLog(WorkoutLogModel model) async {
     final fid = model.firestoreId ?? newFirestoreId();
-    await _sync.uploadWorkoutLog(
-      model.copyWith(firestoreId: fid),
-    );
+    await _sync.uploadWorkoutLog(model.copyWith(firestoreId: fid));
     return 1;
   }
 
@@ -155,6 +153,9 @@ class WorkoutLogDao {
 
   Future<WorkoutLogEntryModel?> findEntryByFirestoreId(String fid) =>
       _sync.findEntryByFirestoreId(fid);
+
+  Stream<List<WorkoutLogEntryModel>> watchAllEntries() =>
+      _sync.watchAllEntries();
 
   Stream<List<WorkoutLogEntryModel>> watchEntriesForLog(String logFid) =>
       _sync.watchEntriesForLog(logFid);

@@ -50,26 +50,41 @@ class _DrawerProgressSectionState extends State<DrawerProgressSection> {
 
     final controller = StreamController<_ProgressSnapshot>();
 
-    void update() async {
+    Future<void> update() async {
+      // Pull logs and entries in parallel — we need both: entries
+      // carry the workout counts, logs carry the date (entries don't
+      // store `performedAt` themselves, only the parent log id).
       final logs = await dao.watchAllLogs().first;
+      final entries = await dao.watchAllEntries().first;
       final frozenResult = await watchFrozen(const NoParams()).first;
       final frozenDays = frozenResult.getOrElse((_) => const <DateTime>{});
 
+      // Build a logFirestoreId → DateTime map so we can resolve every
+      // entry back to the day it was performed on.
+      final logDateByFid = <String, DateTime>{
+        for (final log in logs)
+          if (log.firestoreId != null) log.firestoreId!: log.performedAt,
+      };
+
+      // Counts of individual workouts (entries), grouped by the date
+      // of the parent log. Stale entries whose parent log was deleted
+      // are silently dropped here so they don't inflate totals.
       final byMonth = <String, int>{};
       final byYear = <int, int>{};
       final workoutDays = <DateTime>{};
 
-      for (final log in logs) {
+      for (final entry in entries) {
+        final wlfid = entry.workoutLogFirestoreId;
+        if (wlfid == null) continue;
+        final performedAt = logDateByFid[wlfid];
+        if (performedAt == null) continue;
+
         final key =
-            '${log.performedAt.year}-${log.performedAt.month.toString().padLeft(2, '0')}';
+            '${performedAt.year}-${performedAt.month.toString().padLeft(2, '0')}';
         byMonth[key] = (byMonth[key] ?? 0) + 1;
-        byYear[log.performedAt.year] = (byYear[log.performedAt.year] ?? 0) + 1;
+        byYear[performedAt.year] = (byYear[performedAt.year] ?? 0) + 1;
         workoutDays.add(
-          DateTime(
-            log.performedAt.year,
-            log.performedAt.month,
-            log.performedAt.day,
-          ),
+          DateTime(performedAt.year, performedAt.month, performedAt.day),
         );
       }
 
@@ -95,6 +110,15 @@ class _DrawerProgressSectionState extends State<DrawerProgressSection> {
           '${now.year}-${now.month.toString().padLeft(2, '0')}';
       final thisMonthCount = byMonth[thisMonthKey] ?? 0;
       final thisYearCount = byYear[now.year] ?? 0;
+      // Total = entries with a live parent log (workouts, not
+      // sessions). Stale entries don't count.
+      final totalCount = entries
+          .where(
+            (e) =>
+                e.workoutLogFirestoreId != null &&
+                logDateByFid.containsKey(e.workoutLogFirestoreId),
+          )
+          .length;
 
       final streak = _computeStreak(workoutDays, frozenDays, now);
 
@@ -103,7 +127,7 @@ class _DrawerProgressSectionState extends State<DrawerProgressSection> {
           _ProgressSnapshot(
             thisMonthCount: thisMonthCount,
             thisYearCount: thisYearCount,
-            totalCount: logs.length,
+            totalCount: totalCount,
             streakDays: streak,
             frozenDaysCount: frozenDays.length,
             months: recentMonths,
@@ -114,11 +138,13 @@ class _DrawerProgressSectionState extends State<DrawerProgressSection> {
     }
 
     final sub1 = dao.watchAllLogs().listen((_) => update());
-    final sub2 = watchFrozen(const NoParams()).listen((_) => update());
+    final sub2 = dao.watchAllEntries().listen((_) => update());
+    final sub3 = watchFrozen(const NoParams()).listen((_) => update());
 
     controller.onCancel = () {
       sub1.cancel();
       sub2.cancel();
+      sub3.cancel();
     };
 
     // Initial update
@@ -443,6 +469,14 @@ class _ExpandedBody extends StatelessWidget {
                   letterSpacing: 1.4,
                 ),
               ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${data.thisMonthCount}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
               const Spacer(),
               Text(
                 'tap to view',
@@ -482,6 +516,14 @@ class _ExpandedBody extends StatelessWidget {
                   color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w800,
                   letterSpacing: 1.4,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Text(
+                '${data.thisYearCount}',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
               const Spacer(),

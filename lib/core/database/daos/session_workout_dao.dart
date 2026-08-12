@@ -98,6 +98,7 @@ extension on WorkoutModel {
       defaultDurationSeconds: defaultDurationSeconds,
       defaultWeight: defaultWeight,
       notes: notes,
+      targetedBodyPart: targetedBodyPart,
       firestoreId: firestoreId ?? this.firestoreId,
       masterFirestoreId: masterFirestoreId,
       sessionFirestoreId: sessionFirestoreId,

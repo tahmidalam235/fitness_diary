@@ -43,10 +43,8 @@ class SyncService {
   // Internal helpers
   // ---------------------------------------------------------------------------
 
-  CollectionReference<Map<String, dynamic>> _userSub(
-    String uid,
-    String sub,
-  ) => _fs.collection(FirestorePaths.users).doc(uid).collection(sub);
+  CollectionReference<Map<String, dynamic>> _userSub(String uid, String sub) =>
+      _fs.collection(FirestorePaths.users).doc(uid).collection(sub);
 
   // ---------------------------------------------------------------------------
   // Profile
@@ -175,10 +173,10 @@ class SyncService {
   Stream<List<SessionModel>> watchSessions() {
     final uid = currentFirestoreUid();
     if (uid == null) return Stream.value(const <SessionModel>[]);
-    final query = _userSub(uid, FirestorePaths.sessions).orderBy(
-      'updatedAt',
-      descending: true,
-    );
+    final query = _userSub(
+      uid,
+      FirestorePaths.sessions,
+    ).orderBy('updatedAt', descending: true);
     return query.snapshots().map(
       (snap) => <SessionModel>[
         for (final doc in snap.docs) SessionModel.fromJson(doc.data()),
@@ -190,7 +188,8 @@ class SyncService {
     final uid = currentFirestoreUid();
     if (uid == null || fids.isEmpty) return const <SessionModel>[];
     final results = await Future.wait<Object>([
-      for (final fid in fids) _userSub(uid, FirestorePaths.sessions).doc(fid).get(),
+      for (final fid in fids)
+        _userSub(uid, FirestorePaths.sessions).doc(fid).get(),
     ]);
     return <SessionModel>[
       for (final r in results)
@@ -228,6 +227,7 @@ class SyncService {
           .set({
             'firestoreId': masterFid,
             'exerciseName': model.exerciseName,
+            'targetedBodyPart': model.targetedBodyPart?.id,
             'createdAt':
                 (model.createdAt ?? DateTime.now()).millisecondsSinceEpoch,
             'updatedAt': model.updatedAt?.millisecondsSinceEpoch,
@@ -275,10 +275,10 @@ class SyncService {
   Stream<List<WorkoutModel>> watchAllWorkouts() {
     final uid = currentFirestoreUid();
     if (uid == null) return Stream.value(const <WorkoutModel>[]);
-    final query = _userSub(uid, FirestorePaths.sessionWorkouts).orderBy(
-      'position',
-      descending: false,
-    );
+    final query = _userSub(
+      uid,
+      FirestorePaths.sessionWorkouts,
+    ).orderBy('position', descending: false);
     return query.snapshots().map(
       (snap) => <WorkoutModel>[
         for (final doc in snap.docs) WorkoutModel.fromJson(doc.data()),
@@ -292,10 +292,10 @@ class SyncService {
   Stream<List<WorkoutModel>> watchBySession(String sessionFid) {
     final uid = currentFirestoreUid();
     if (uid == null) return Stream.value(const <WorkoutModel>[]);
-    final query = _userSub(uid, FirestorePaths.sessionWorkouts).where(
-      'sessionFirestoreId',
-      isEqualTo: sessionFid,
-    );
+    final query = _userSub(
+      uid,
+      FirestorePaths.sessionWorkouts,
+    ).where('sessionFirestoreId', isEqualTo: sessionFid);
     return query.snapshots().map((snap) {
       final rows = <WorkoutModel>[
         for (final doc in snap.docs) WorkoutModel.fromJson(doc.data()),
@@ -347,9 +347,10 @@ class SyncService {
   Future<WorkoutModel?> getById(String fid) async {
     final uid = currentFirestoreUid();
     if (uid == null) return null;
-    final doc = await _userSub(uid, FirestorePaths.sessionWorkouts)
-        .doc(fid)
-        .get();
+    final doc = await _userSub(
+      uid,
+      FirestorePaths.sessionWorkouts,
+    ).doc(fid).get();
     if (!doc.exists) return null;
     return WorkoutModel.fromJson(doc.data() as Map<String, dynamic>);
   }
@@ -447,10 +448,10 @@ class SyncService {
     // Equality + range needs a composite index we don't want to ship,
     // so we filter the date range client-side after the indexed
     // session lookup.
-    final query = _userSub(uid, FirestorePaths.workoutLogs).where(
-      'sessionFirestoreId',
-      isEqualTo: sessionFid,
-    );
+    final query = _userSub(
+      uid,
+      FirestorePaths.workoutLogs,
+    ).where('sessionFirestoreId', isEqualTo: sessionFid);
     final snap = await query.get();
     final candidates = <WorkoutLogModel>[
       for (final doc in snap.docs) WorkoutLogModel.fromJson(doc.data()),
@@ -516,10 +517,10 @@ class SyncService {
   Stream<List<WorkoutLogEntryModel>> watchEntriesForLog(String logFid) {
     final uid = currentFirestoreUid();
     if (uid == null) return Stream.value(const <WorkoutLogEntryModel>[]);
-    final query = _userSub(uid, FirestorePaths.workoutLogEntries).where(
-      'workoutLogFirestoreId',
-      isEqualTo: logFid,
-    );
+    final query = _userSub(
+      uid,
+      FirestorePaths.workoutLogEntries,
+    ).where('workoutLogFirestoreId', isEqualTo: logFid);
     return query.snapshots().map((snap) {
       final entries = <WorkoutLogEntryModel>[
         for (final doc in snap.docs) WorkoutLogEntryModel.fromJson(doc.data()),
@@ -539,9 +540,8 @@ class SyncService {
   Stream<List<DayEntryRow>> watchEntriesForDay(DateTime day) {
     final uid = currentFirestoreUid();
     if (uid == null) return Stream.value(const <DayEntryRow>[]);
-    // Fetch all logs for the given day, then expand to entries via the
-    // per-log stream. We join manually because Firestore doesn't support
-    // arbitrary cross-collection joins.
+
+    // 1. Get logs for the day.
     final start = DateTime(day.year, day.month, day.day);
     final end = start.add(const Duration(days: 1));
     final logsQuery = _userSub(uid, FirestorePaths.workoutLogs)
@@ -551,24 +551,33 @@ class SyncService {
         )
         .where('performedAt', isLessThan: end.millisecondsSinceEpoch);
 
-    return logsQuery.snapshots().asyncMap((logsSnap) async {
-      final logFids = <String>[
-        for (final doc in logsSnap.docs)
-          if (doc.data()['firestoreId'] is String)
-            doc.data()['firestoreId'] as String,
-      ];
-      if (logFids.isEmpty) return const <DayEntryRow>[];
-      final entriesPerLog = await Future.wait<Object>([
-        for (final fid in logFids) watchEntriesForLog(fid).first,
-      ]);
-      final rows = <DayEntryRow>[];
-      for (var i = 0; i < logFids.length; i++) {
-        final entries = (entriesPerLog[i] as List).cast<WorkoutLogEntryModel>();
-        for (final entry in entries) {
-          rows.add(DayEntryRow(entry: entry, logFid: logFids[i]));
+    // 2. Watch all entries for the user.
+    final entriesStream = watchAllEntries();
+
+    // 3. Combine them to filter entries by the logs on this specific day.
+    // This ensures real-time updates for entry edits (e.g. rep changes)
+    // without complex per-log listeners.
+    return logsQuery.snapshots().asyncExpand((logsSnap) {
+      final logFids = logsSnap.docs.map((doc) => doc.id).toSet();
+
+      return entriesStream.map((allEntries) {
+        final rows = <DayEntryRow>[];
+        for (final entry in allEntries) {
+          if (logFids.contains(entry.workoutLogFirestoreId)) {
+            rows.add(
+              DayEntryRow(entry: entry, logFid: entry.workoutLogFirestoreId!),
+            );
+          }
         }
-      }
-      return rows;
+        // Grouping is handled by HistoryLocalDataSource; sorting matches
+        // the existing watchEntriesForLog contract.
+        rows.sort((a, b) {
+          final byPos = a.entry.position.compareTo(b.entry.position);
+          if (byPos != 0) return byPos;
+          return a.entry.setIndex.compareTo(b.entry.setIndex);
+        });
+        return rows;
+      });
     });
   }
 
@@ -604,6 +613,18 @@ class SyncService {
 
   Future<WorkoutLogEntryModel?> findEntryByFirestoreId(String fid) =>
       getEntryById(fid);
+
+  /// Streams every workout log entry for the current user.
+  Stream<List<WorkoutLogEntryModel>> watchAllEntries() {
+    final uid = currentFirestoreUid();
+    if (uid == null) return Stream.value(const <WorkoutLogEntryModel>[]);
+    final query = _userSub(uid, FirestorePaths.workoutLogEntries);
+    return query.snapshots().map((snap) {
+      return <WorkoutLogEntryModel>[
+        for (final doc in snap.docs) WorkoutLogEntryModel.fromJson(doc.data()),
+      ];
+    });
+  }
 
   /// Returns the most recent prior entry per workout id (excluding
   /// entries performed on or after [beforeDay]). Used by the prefill

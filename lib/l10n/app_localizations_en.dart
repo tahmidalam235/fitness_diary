@@ -423,6 +423,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutFieldDefaultWeight => 'Default weight';
 
   @override
+  String get workoutFieldTargetedBodyPart => 'Targeted body part';
+
+  @override
+  String get workoutTargetedBodyPartEmpty => 'Select body part';
+
+  @override
+  String get workoutTargetedBodyPartClear => 'Clear selection';
+
+  @override
   String get workoutFieldNotes => 'Notes';
 
   @override

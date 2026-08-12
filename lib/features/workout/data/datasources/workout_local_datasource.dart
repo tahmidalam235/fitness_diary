@@ -3,6 +3,7 @@ import '../../../../core/database/daos/session_workout_dao.dart';
 import '../../../../core/database/daos/workout_dao.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/sync/firestore_id.dart';
+import '../../domain/entities/body_part.dart';
 import '../models/workout_model.dart';
 
 /// Firestore-backed adapter for the workout feature. Translates
@@ -50,6 +51,7 @@ class WorkoutLocalDataSource {
     int? defaultDurationSeconds,
     double? defaultWeight,
     required String notes,
+    BodyPart? targetedBodyPart,
   }) async {
     if (sessionId.isEmpty) {
       throw ValidationException(
@@ -89,6 +91,7 @@ class WorkoutLocalDataSource {
         defaultDurationSeconds: defaultDurationSeconds,
         defaultWeight: defaultWeight,
         notes: notes,
+        targetedBodyPart: targetedBodyPart,
         firestoreId: joinFid,
         masterFirestoreId: masterFid,
         sessionFirestoreId: sessionId,
@@ -122,6 +125,7 @@ class WorkoutLocalDataSource {
     int? defaultDurationSeconds,
     double? defaultWeight,
     required String notes,
+    BodyPart? targetedBodyPart,
   }) async {
     try {
       final existing = await _resolveById(id);
@@ -149,6 +153,7 @@ class WorkoutLocalDataSource {
         defaultDurationSeconds: defaultDurationSeconds,
         defaultWeight: defaultWeight,
         notes: notes,
+        targetedBodyPart: targetedBodyPart,
         updatedAt: DateTime.now(),
       );
       await sessionWorkoutDao.updateSessionWorkout(updated);
@@ -275,6 +280,7 @@ extension on WorkoutModel {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String? notes,
+    BodyPart? targetedBodyPart,
     DateTime? updatedAt,
   }) {
     return WorkoutModel(
@@ -289,6 +295,7 @@ extension on WorkoutModel {
           defaultDurationSeconds ?? this.defaultDurationSeconds,
       defaultWeight: defaultWeight ?? this.defaultWeight,
       notes: notes ?? this.notes,
+      targetedBodyPart: targetedBodyPart ?? this.targetedBodyPart,
       firestoreId: firestoreId,
       masterFirestoreId: masterFirestoreId,
       sessionFirestoreId: sessionFirestoreId,

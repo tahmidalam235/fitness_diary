@@ -29,6 +29,13 @@ abstract class HistoryRepository {
   Stream<Either<Failure, Map<int, List<WorkoutLogEntry>>>>
   watchEntriesByLogForDay(DateTime day);
 
+  /// Streams every [WorkoutLogEntry] whose parent log was performed in
+  /// the half-open range `[start, end)`.
+  Stream<Either<Failure, List<WorkoutLogEntry>>> watchEntriesInRange({
+    required DateTime start,
+    required DateTime end,
+  });
+
   /// One-shot lookup of master workouts by id. Used by the Daily Details
   /// page to render exercise names without N round trips.
   Future<Either<Failure, Map<int, Workout>>> getWorkoutsByIds(

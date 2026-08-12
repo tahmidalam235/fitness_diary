@@ -80,6 +80,34 @@ class HistoryRepositoryImpl implements HistoryRepository {
   }
 
   @override
+  Stream<Either<Failure, List<WorkoutLogEntry>>> watchEntriesInRange({
+    required DateTime start,
+    required DateTime end,
+  }) {
+    // 1. Listen to all entries.
+    return dataSource.watchAllEntries().asyncMap((entries) async {
+      try {
+        // 2. Resolve which logs are in range right now.
+        final logsEither = await watchLogsInRange(start: start, end: end).first;
+        final logFids = logsEither.fold(
+          (_) => <String>{},
+          (logs) => logs.map((l) => l.firestoreId).whereType<String>().toSet(),
+        );
+
+        // 3. Filter entries to only those belonging to a log in this range.
+        final filtered = entries
+            .where((e) => logFids.contains(e.workoutLogFirestoreId))
+            .toList();
+        return Right<Failure, List<WorkoutLogEntry>>(filtered);
+      } catch (error) {
+        return Left<Failure, List<WorkoutLogEntry>>(
+          _mapError(error, 'Failed to watch entries in range'),
+        );
+      }
+    });
+  }
+
+  @override
   Future<Either<Failure, Map<int, Workout>>> getWorkoutsByIds(
     List<int> workoutIds,
   ) async {

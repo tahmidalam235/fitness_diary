@@ -85,6 +85,7 @@ class _WorkoutFormView extends StatelessWidget {
           defaultDurationSeconds: result.defaultDurationSeconds,
           defaultWeight: result.defaultWeight,
           notes: result.notes,
+          targetedBodyPart: result.targetedBodyPart,
         ),
       );
     } else {
@@ -97,6 +98,7 @@ class _WorkoutFormView extends StatelessWidget {
           defaultDurationSeconds: result.defaultDurationSeconds,
           defaultWeight: result.defaultWeight,
           notes: result.notes,
+          targetedBodyPart: result.targetedBodyPart,
         ),
       );
     }

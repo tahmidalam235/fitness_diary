@@ -1,6 +1,7 @@
 import '../../../../core/error/failure.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/utils/unit.dart';
+import '../entities/body_part.dart';
 import '../entities/workout.dart';
 
 abstract class WorkoutRepository {
@@ -18,6 +19,7 @@ abstract class WorkoutRepository {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String notes,
+    BodyPart? targetedBodyPart,
   });
 
   /// Updates the per-session defaults (and the master workout name).
@@ -29,6 +31,7 @@ abstract class WorkoutRepository {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String notes,
+    BodyPart? targetedBodyPart,
   });
 
   /// Removes the link between the session and the workout, and the

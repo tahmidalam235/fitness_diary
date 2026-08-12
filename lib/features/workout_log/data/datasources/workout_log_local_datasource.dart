@@ -32,11 +32,10 @@ class WorkoutLogLocalDataSource {
         return _hydrateLog(existing);
       }
       final fid = newFirestoreId();
-      final now = DateTime(today.year, today.month, today.day);
       final model = WorkoutLogModel(
         id: fid.hashCode,
         sessionId: sessionFirestoreId.hashCode,
-        performedAt: now,
+        performedAt: today,
         firestoreId: fid,
         sessionFirestoreId: sessionFirestoreId,
         updatedAt: DateTime.now(),

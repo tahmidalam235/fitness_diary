@@ -127,8 +127,10 @@ class _FreezePageState extends State<FreezePage> {
   }
 }
 
-/// Horizontal strip of the last 30 days. Each cell is a tap-to-toggle
-/// chip.
+/// Horizontal strip of upcoming 30 days starting from TOMORROW.
+/// Each cell is a tap-to-toggle chip. The month abbreviation of the
+/// first day in the strip is rendered above the chips so the user
+/// always sees which month the leftmost date belongs to.
 class _FreezeStrip extends StatelessWidget {
   const _FreezeStrip({required this.frozen, required this.onToggle});
 
@@ -137,31 +139,52 @@ class _FreezeStrip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // 30 days inclusive of today, oldest first.
+    // 30 days starting from TOMORROW (today + 1) through today + 30.
+    final firstDay = today.add(const Duration(days: 1));
     final days = List<DateTime>.generate(
       30,
-      (i) => today.subtract(Duration(days: 29 - i)),
+      (i) => firstDay.add(Duration(days: i)),
     );
+    final monthLabel = DateFormat.MMM().format(firstDay).toUpperCase();
 
-    return SizedBox(
-      height: 80,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 2),
-        itemCount: days.length,
-        separatorBuilder: (_, _) => const Gap(AppSpacing.xs),
-        itemBuilder: (context, i) {
-          final day = days[i];
-          final isFrozen = frozen.contains(day);
-          return _FreezeChip(
-            day: day,
-            frozen: isFrozen,
-            onTap: () => onToggle(day, !isFrozen),
-          );
-        },
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Text(
+            monthLabel,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.primary,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.4,
+            ),
+          ),
+        ),
+        const Gap(AppSpacing.xs),
+        SizedBox(
+          height: 80,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            itemCount: days.length,
+            separatorBuilder: (_, _) => const Gap(AppSpacing.xs),
+            itemBuilder: (context, i) {
+              final day = days[i];
+              final isFrozen = frozen.contains(day);
+              return _FreezeChip(
+                day: day,
+                frozen: isFrozen,
+                onTap: () => onToggle(day, !isFrozen),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

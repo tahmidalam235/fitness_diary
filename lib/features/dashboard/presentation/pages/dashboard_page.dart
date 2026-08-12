@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:gap/gap.dart';
@@ -61,7 +63,9 @@ class _DashboardViewState extends State<_DashboardView> {
   }
 
   /// Streams a stats snapshot every time the underlying DB changes.
-  /// Cheap because we only count, not read all rows.
+  /// We listen to BOTH log and entry streams so the KPIs refresh when
+  /// a workout record is added, edited, or deleted — not just when a
+  /// session log header changes.
   Stream<_DashboardStats> _buildStatsStream() {
     final dao = getIt<WorkoutLogDao>();
 
@@ -69,30 +73,62 @@ class _DashboardViewState extends State<_DashboardView> {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final weekStart = today.subtract(const Duration(days: 6));
+      // "Sessions this week" counts distinct session-log rows in the
+      // last 7 days (one WorkoutLog per (session, day) pair) — that's
+      // exactly what `watchLogsInRange` gives us.
       final last7 = await dao
           .watchLogsInRange(
             start: weekStart,
             end: today.add(const Duration(days: 1)),
           )
           .first;
+      // For "Total workouts logged" and "Sets logged" we need every
+      // recorded entry, plus the per-log date so a stale entry whose
+      // parent log was deleted doesn't inflate totals.
       final allLogs = await dao.watchAllLogs().first;
-      // Total set count across all logs:
-      int totalSets = 0;
-      for (final log in allLogs) {
-        final entries = await dao.getEntriesForLogById(log.id);
-        totalSets += entries.length;
-      }
+      final logFidById = <String, int>{
+        for (final log in allLogs)
+          if (log.firestoreId != null) log.firestoreId!: log.id,
+      };
+      final allEntries = await dao.watchAllEntries().first;
+      final liveEntries = allEntries
+          .where(
+            (e) =>
+                e.workoutLogFirestoreId != null &&
+                logFidById.containsKey(e.workoutLogFirestoreId),
+          )
+          .toList();
+      // Total workouts = individual entries (not sessions, not templates).
+      // Total sets = sum of each entry's logged `sets` value.
+      final totalSets = liveEntries.fold<int>(
+        0,
+        (sum, e) => sum + (e.sets ?? 0),
+      );
       return _DashboardStats(
         sessionsThisWeek: last7.length,
-        totalWorkouts: allLogs.length,
+        totalWorkouts: liveEntries.length,
         totalSets: totalSets,
       );
     }
 
-    // Re-emit whenever any log row changes. The Drift stream emits an
-    // initial snapshot synchronously, so the StreamBuilder receives data
-    // on first frame without needing a separate "seed" event.
-    return dao.watchAllLogs().asyncMap((_) => read());
+    // Re-emit whenever any log row OR any entry row changes. We pull
+    // a fresh snapshot on every emission; the initial seed runs once
+    // via the explicit `read()` call below.
+    final controller = StreamController<_DashboardStats>();
+    void refresh() {
+      read().then((stats) {
+        if (!controller.isClosed) controller.add(stats);
+      });
+    }
+
+    final subLogs = dao.watchAllLogs().listen((_) => refresh());
+    final subEntries = dao.watchAllEntries().listen((_) => refresh());
+    controller.onCancel = () {
+      subLogs.cancel();
+      subEntries.cancel();
+    };
+    refresh();
+    return controller.stream;
   }
 
   @override

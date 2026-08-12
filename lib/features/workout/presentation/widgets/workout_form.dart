@@ -6,7 +6,9 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_text_field.dart';
+import '../../domain/entities/body_part.dart';
 import '../../domain/entities/workout.dart';
+import 'body_part_picker_sheet.dart';
 
 /// Result returned from [WorkoutForm] via the [onSubmit] callback.
 class WorkoutFormResult {
@@ -17,6 +19,7 @@ class WorkoutFormResult {
     this.defaultDurationSeconds,
     this.defaultWeight,
     this.notes = '',
+    this.targetedBodyPart,
   });
 
   final String exerciseName;
@@ -25,6 +28,7 @@ class WorkoutFormResult {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final BodyPart? targetedBodyPart;
 }
 
 /// Stateful form for creating or editing a workout.
@@ -47,6 +51,8 @@ class _WorkoutFormState extends State<WorkoutForm> {
   late final TextEditingController _durationController;
   late final TextEditingController _weightController;
   late final TextEditingController _notesController;
+
+  BodyPart? _selectedBodyPart;
 
   bool _submitting = false;
 
@@ -73,6 +79,7 @@ class _WorkoutFormState extends State<WorkoutForm> {
       text: initial?.defaultWeight?.toString() ?? '',
     );
     _notesController = TextEditingController(text: initial?.notes ?? '');
+    _selectedBodyPart = initial?.targetedBodyPart;
   }
 
   @override
@@ -112,6 +119,7 @@ class _WorkoutFormState extends State<WorkoutForm> {
           defaultDurationSeconds: duration,
           defaultWeight: weight,
           notes: _notesController.text.trim(),
+          targetedBodyPart: _selectedBodyPart,
         ),
       );
     } finally {
@@ -216,6 +224,18 @@ class _WorkoutFormState extends State<WorkoutForm> {
               }
               return null;
             },
+          ),
+          const Gap(AppSpacing.xl),
+
+          // Section: target
+          _SectionLabel(
+            label: 'Target'.toUpperCase(),
+            color: theme.colorScheme.primary,
+          ),
+          const Gap(AppSpacing.sm),
+          _BodyPartField(
+            value: _selectedBodyPart,
+            onChanged: (part) => setState(() => _selectedBodyPart = part),
           ),
           const Gap(AppSpacing.xl),
 
@@ -386,6 +406,111 @@ class _SectionLabel extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Tappable card that opens the [BodyPartPickerSheet] and reflects the
+/// current selection (icon + label) or a placeholder when nothing is
+/// picked.
+class _BodyPartField extends StatelessWidget {
+  const _BodyPartField({required this.value, required this.onChanged});
+
+  final BodyPart? value;
+  final ValueChanged<BodyPart?> onChanged;
+
+  Future<void> _open(BuildContext context) async {
+    final picked = await BodyPartPickerSheet.show(
+      context,
+      initial: value,
+    );
+    if (picked != null || value != null) {
+      onChanged(picked);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final hasValue = value != null;
+    return Material(
+      color: hasValue
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.35)
+          : theme.colorScheme.surfaceContainerHigh,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => _open(context),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md,
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: hasValue
+                      ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                      : theme.colorScheme.outlineVariant
+                          .withValues(alpha: 0.25),
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  value?.icon ?? Icons.accessibility_new_rounded,
+                  color: hasValue
+                      ? theme.colorScheme.onPrimaryContainer
+                      : theme.colorScheme.onSurfaceVariant,
+                  size: 22,
+                ),
+              ),
+              const Gap(AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.workoutFieldTargetedBodyPart,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: hasValue
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    const Gap(AppSpacing.xxs),
+                    Text(
+                      hasValue
+                          ? value!.label
+                          : l10n.workoutTargetedBodyPartEmpty,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: hasValue
+                            ? theme.colorScheme.onPrimaryContainer
+                            : theme.colorScheme.onSurface,
+                        fontWeight: hasValue
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Gap(AppSpacing.sm),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: hasValue
+                    ? theme.colorScheme.onPrimaryContainer
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

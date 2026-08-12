@@ -7,6 +7,7 @@ import '../../../../core/sync/sync_service.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/utils/unit.dart';
 import '../../../session/data/datasources/session_local_datasource.dart';
+import '../../domain/entities/body_part.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../datasources/workout_local_datasource.dart';
@@ -63,6 +64,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String notes = '',
+    BodyPart? targetedBodyPart,
   }) async {
     return _guard(() async {
       final sessionFid = await _resolveSessionFirestoreId(sessionId);
@@ -74,6 +76,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         defaultDurationSeconds: defaultDurationSeconds,
         defaultWeight: defaultWeight,
         notes: notes,
+        targetedBodyPart: targetedBodyPart,
       );
       unawaited(sync?.uploadMasterWorkout(model));
       unawaited(sync?.uploadSessionWorkout(model));
@@ -90,6 +93,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String notes = '',
+    BodyPart? targetedBodyPart,
   }) async {
     return _guard(() async {
       final model = await dataSource.update(
@@ -100,6 +104,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         defaultDurationSeconds: defaultDurationSeconds,
         defaultWeight: defaultWeight,
         notes: notes,
+        targetedBodyPart: targetedBodyPart,
       );
       unawaited(sync?.uploadMasterWorkout(model));
       unawaited(sync?.uploadSessionWorkout(model));

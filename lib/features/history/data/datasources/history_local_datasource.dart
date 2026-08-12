@@ -44,8 +44,9 @@ class HistoryLocalDataSource {
     }
   }
 
-  Stream<Map<String, List<entity.WorkoutLogEntry>>>
-      watchEntriesByLogForDay(DateTime day) {
+  Stream<Map<String, List<entity.WorkoutLogEntry>>> watchEntriesByLogForDay(
+    DateTime day,
+  ) {
     try {
       return workoutLogDao.watchEntriesForDay(day).map((rows) {
         final map = <String, List<entity.WorkoutLogEntry>>{};
@@ -74,6 +75,21 @@ class HistoryLocalDataSource {
     } catch (error) {
       throw DatabaseException(
         'Failed to watch workout entries for day',
+        cause: error,
+      );
+    }
+  }
+
+  Stream<List<entity.WorkoutLogEntry>> watchAllEntries() {
+    try {
+      return workoutLogDao.watchAllEntries().map(
+        (models) => <entity.WorkoutLogEntry>[
+          for (final m in models) m.toEntity(),
+        ],
+      );
+    } catch (error) {
+      throw DatabaseException(
+        'Failed to watch all workout entries',
         cause: error,
       );
     }

@@ -23,6 +23,7 @@ import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
 import '../../../session/presentation/bloc/session_state.dart';
+import '../../../workout/domain/entities/body_part.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
@@ -494,6 +495,10 @@ class _TodayWorkoutCard extends StatelessWidget {
                     ),
                 ],
               ),
+              if (workout.targetedBodyPart != null) ...[
+                const Gap(AppSpacing.xs),
+                _BodyPartBadge(part: workout.targetedBodyPart!),
+              ],
               const Gap(AppSpacing.sm),
               Wrap(
                 spacing: AppSpacing.md,
@@ -562,6 +567,45 @@ class _WorkoutDetailItem extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _BodyPartBadge extends StatelessWidget {
+  const _BodyPartBadge({required this.part});
+
+  final BodyPart part;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            part.icon,
+            size: 14,
+            color: theme.colorScheme.onPrimaryContainer,
+          ),
+          const Gap(AppSpacing.xs),
+          Text(
+            part.label,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: theme.colorScheme.onPrimaryContainer,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

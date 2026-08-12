@@ -844,6 +844,24 @@ abstract class AppLocalizations {
   /// **'Default weight'**
   String get workoutFieldDefaultWeight;
 
+  /// No description provided for @workoutFieldTargetedBodyPart.
+  ///
+  /// In en, this message translates to:
+  /// **'Targeted body part'**
+  String get workoutFieldTargetedBodyPart;
+
+  /// No description provided for @workoutTargetedBodyPartEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'Select body part'**
+  String get workoutTargetedBodyPartEmpty;
+
+  /// No description provided for @workoutTargetedBodyPartClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear selection'**
+  String get workoutTargetedBodyPartClear;
+
   /// No description provided for @workoutFieldNotes.
   ///
   /// In en, this message translates to:

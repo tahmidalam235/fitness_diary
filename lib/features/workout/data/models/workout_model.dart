@@ -1,3 +1,4 @@
+import '../../domain/entities/body_part.dart';
 import '../../domain/entities/workout.dart';
 
 /// JSON adapter for [Workout].
@@ -19,6 +20,7 @@ class WorkoutModel {
     required this.defaultDurationSeconds,
     required this.defaultWeight,
     required this.notes,
+    this.targetedBodyPart,
     this.firestoreId,
     this.masterFirestoreId,
     this.sessionFirestoreId,
@@ -44,6 +46,7 @@ class WorkoutModel {
       defaultDurationSeconds: json['defaultDurationSeconds'] as int?,
       defaultWeight: (json['defaultWeight'] as num?)?.toDouble(),
       notes: (json['notes'] as String?) ?? '',
+      targetedBodyPart: BodyPart.fromId(json['targetedBodyPart'] as String?),
       firestoreId: joinFid,
       masterFirestoreId: masterFid,
       sessionFirestoreId: sessionFid,
@@ -64,6 +67,7 @@ class WorkoutModel {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final BodyPart? targetedBodyPart;
   final String? firestoreId;
   final String? masterFirestoreId;
   final String? sessionFirestoreId;
@@ -82,6 +86,7 @@ class WorkoutModel {
       defaultDurationSeconds: defaultDurationSeconds,
       defaultWeight: defaultWeight,
       notes: notes,
+      targetedBodyPart: targetedBodyPart,
       masterFirestoreId: masterFirestoreId,
     );
   }
@@ -98,6 +103,7 @@ class WorkoutModel {
     'defaultDurationSeconds': defaultDurationSeconds,
     'defaultWeight': defaultWeight,
     'notes': notes,
+    'targetedBodyPart': targetedBodyPart?.id,
     'createdAt': (createdAt ?? DateTime.now()).millisecondsSinceEpoch,
     'updatedAt': updatedAt?.millisecondsSinceEpoch,
   };
