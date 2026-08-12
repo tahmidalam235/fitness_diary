@@ -74,8 +74,9 @@ class SessionCard extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primaryContainer
-                              .withValues(alpha: 0.55),
+                          color: theme.colorScheme.primaryContainer.withValues(
+                            alpha: 0.55,
+                          ),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Row(

@@ -5,10 +5,11 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
-import '../../../../core/database/app_database.dart';
 import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../session/data/datasources/session_local_datasource.dart';
 import '../../workout/data/datasources/workout_local_datasource.dart';
+import '../../workout_log/data/models/workout_log_entry_model.dart';
 
 /// Service that exports the user's workout history as a CSV file and
 /// hands it to the OS share sheet.
@@ -22,10 +23,12 @@ class HistoryExportService {
   HistoryExportService({
     required this.workoutLogDao,
     required this.workoutLocalDataSource,
+    required this.sessionLocalDataSource,
   });
 
   final WorkoutLogDao workoutLogDao;
   final WorkoutLocalDataSource workoutLocalDataSource;
+  final SessionLocalDataSource sessionLocalDataSource;
 
   /// CSV column header. Public so tests can reference the canonical
   /// column order.
@@ -99,34 +102,44 @@ class HistoryExportService {
     final sorted = [...filtered]
       ..sort((a, b) => a.performedAt.compareTo(b.performedAt));
 
-    // Resolve every distinct sessionId once via the workout datasource's
-    // optional sessionDao.
-    final sessionDao = workoutLocalDataSource.sessionDao;
-    final sessionIds = sorted.map((l) => l.sessionId).toSet().toList();
+    // Resolve every distinct sessionId once via the session data
+    // source.
+    final sessionIds = sorted
+        .map((l) => l.sessionId)
+        .whereType<int>()
+        .toSet()
+        .toList();
     final sessionNames = <int, String>{};
-    if (sessionDao != null && sessionIds.isNotEmpty) {
-      final sessions = await sessionDao.getSessionsByIds(sessionIds);
-      for (final s in sessions) {
-        sessionNames[s.id] = s.name;
+    if (sessionIds.isNotEmpty) {
+      final allSessions = await sessionLocalDataSource.getAll();
+      final wanted = sessionIds.toSet();
+      for (final s in allSessions) {
+        if (s.id != null && wanted.contains(s.id)) {
+          sessionNames[s.id!] = s.name;
+        }
       }
     }
 
-    // Fan out to fetch entries per log (same N+1 pattern as the
-    // dashboard) and collect distinct workout ids for name lookup.
-    final workoutIds = <int>{};
-    final logToEntries = <int, List<WorkoutLogEntry>>{};
+    // Fan out to fetch entries per log.
+    final workoutFids = <String>{};
+    final logToEntries = <String, List<WorkoutLogEntryModel>>{};
     for (final log in sorted) {
-      final entries = await workoutLogDao.watchEntriesForLog(log.id).first;
-      logToEntries[log.id] = entries;
+      if (log.firestoreId == null) continue;
+      final entries = await workoutLogDao
+          .watchEntriesForLog(log.firestoreId!)
+          .first;
+      logToEntries[log.firestoreId!] = entries;
       for (final e in entries) {
-        workoutIds.add(e.workoutId);
+        if (e.workoutFirestoreId != null) {
+          workoutFids.add(e.workoutFirestoreId!);
+        }
       }
     }
 
     final exerciseNames = <int, String>{};
-    if (workoutIds.isNotEmpty) {
+    if (workoutFids.isNotEmpty) {
       final masters = await workoutLocalDataSource.getByIds(
-        workoutIds.toList(),
+        workoutFids.toList(),
       );
       for (final m in masters) {
         exerciseNames[m.workoutId] = m.exerciseName;
@@ -139,7 +152,10 @@ class HistoryExportService {
     buf.writeln(_encodeRow(csvHeader));
 
     for (final log in sorted) {
-      final entries = logToEntries[log.id] ?? const <WorkoutLogEntry>[];
+      final logFid = log.firestoreId;
+      final entries = logFid != null
+          ? (logToEntries[logFid] ?? const <WorkoutLogEntryModel>[])
+          : const <WorkoutLogEntryModel>[];
       final date = dateFmt.format(log.performedAt);
       final time = timeFmt.format(log.performedAt);
       final sessionName = sessionNames[log.sessionId] ?? '';

@@ -1,13 +1,11 @@
-import 'package:drift/drift.dart';
-
-import '../../../../core/database/app_database.dart' as db;
 import '../../domain/entities/session.dart';
 
-/// Maps between Drift [db.Session] rows (the generated data class) and
-/// the domain [Session] entity.
+/// JSON adapter for [Session].
 ///
-/// Kept as a thin wrapper rather than extending the generated class so
-/// the domain layer never depends on the database schema directly.
+/// Source of truth lives in Firestore: every [SessionModel] carries a
+/// `firestoreId` (the Firestore document id) and an `id` (an
+/// `int` derived from `firestoreId.hashCode`) so the existing
+/// int-keyed domain layer doesn't have to change.
 class SessionModel {
   const SessionModel({
     required this.id,
@@ -16,19 +14,24 @@ class SessionModel {
     required this.createdAt,
     required this.updatedAt,
     required this.workoutCount,
+    this.firestoreId,
   });
 
-  factory SessionModel.fromDrift(
-    db.Session row, {
-    int workoutCount = 0,
-  }) {
+  /// Builds a [SessionModel] from a Firestore document. The local int
+  /// `id` is derived from `firestoreId.hashCode` for backwards-compat
+  /// with the int-keyed domain layer.
+  factory SessionModel.fromJson(Map<String, dynamic> json) {
+    final fid = json['firestoreId'] as String;
     return SessionModel(
-      id: row.id,
-      name: row.name,
-      description: row.description,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      workoutCount: workoutCount,
+      id: fid.hashCode,
+      name: json['name'] as String,
+      description: (json['description'] as String?) ?? '',
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
+          : null,
+      workoutCount: 0,
+      firestoreId: fid,
     );
   }
 
@@ -38,6 +41,7 @@ class SessionModel {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final int workoutCount;
+  final String? firestoreId;
 
   Session toEntity() {
     return Session(
@@ -50,24 +54,12 @@ class SessionModel {
     );
   }
 
-  /// Companion used when inserting a new row.
-  db.SessionsCompanion toInsertCompanion() {
-    return db.SessionsCompanion.insert(
-      name: name,
-      description: Value(description),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-    );
-  }
-
-  /// Companion used when updating an existing row.
-  db.SessionsCompanion toUpdateCompanion() {
-    return db.SessionsCompanion(
-      id: Value(id!),
-      name: Value(name),
-      description: Value(description),
-      createdAt: Value(createdAt),
-      updatedAt: Value(updatedAt),
-    );
-  }
+  /// JSON shape for cloud sync.
+  Map<String, dynamic> toJson() => {
+    'firestoreId': firestoreId,
+    'name': name,
+    'description': description,
+    'createdAt': createdAt.millisecondsSinceEpoch,
+    'updatedAt': updatedAt?.millisecondsSinceEpoch,
+  };
 }

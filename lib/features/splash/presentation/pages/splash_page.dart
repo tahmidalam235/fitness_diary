@@ -28,16 +28,14 @@ class _SplashPageState extends State<SplashPage>
   void initState() {
     super.initState();
 
-    _controller = AnimationController(
-      vsync: this,
-      duration: AppDurations.slow,
-    );
+    _controller = AnimationController(vsync: this, duration: AppDurations.slow);
 
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOutBack),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
 
     _controller.forward();
 
@@ -90,12 +88,12 @@ class _SplashPageState extends State<SplashPage>
                     height: 96,
                     decoration: BoxDecoration(
                       gradient: AppTheme.heroGradient,
-                      borderRadius:
-                          BorderRadius.circular(AppRadius.xl),
+                      borderRadius: BorderRadius.circular(AppRadius.xl),
                       boxShadow: [
                         BoxShadow(
-                          color:
-                              theme.colorScheme.primary.withValues(alpha: 0.35),
+                          color: theme.colorScheme.primary.withValues(
+                            alpha: 0.35,
+                          ),
                           blurRadius: 24,
                           offset: const Offset(0, 14),
                         ),

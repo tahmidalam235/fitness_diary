@@ -45,8 +45,11 @@ class MonthSection extends StatelessWidget {
   /// [month].
   List<DateTime> _buildGridDates() {
     final sundayOffset = month.weekday % 7; // Mon=1..Sun=7 → 1..0
-    final start = DateTime(month.year, month.month, 1)
-        .subtract(Duration(days: sundayOffset));
+    final start = DateTime(
+      month.year,
+      month.month,
+      1,
+    ).subtract(Duration(days: sundayOffset));
     return List<DateTime>.generate(
       42,
       (i) => DateTime(start.year, start.month, start.day + i),

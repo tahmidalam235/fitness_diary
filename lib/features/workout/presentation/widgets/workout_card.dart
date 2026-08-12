@@ -60,10 +60,7 @@ class WorkoutCard extends StatelessWidget {
             child: Row(
               children: [
                 dragHandle,
-                if (leading != null) ...[
-                  const Gap(AppSpacing.xs),
-                  leading!,
-                ],
+                if (leading != null) ...[const Gap(AppSpacing.xs), leading!],
                 const Gap(AppSpacing.xs),
                 _PositionAvatar(position: workout.position + 1),
                 const Gap(AppSpacing.md),
@@ -96,7 +93,7 @@ class WorkoutCard extends StatelessWidget {
                             _Chip(
                               icon: Icons.schedule_rounded,
                               label: l10n.workoutListDuration(
-                                workout.defaultDurationSeconds!,
+                                (workout.defaultDurationSeconds! / 60).round(),
                               ),
                             ),
                           if (workout.defaultWeight != null)

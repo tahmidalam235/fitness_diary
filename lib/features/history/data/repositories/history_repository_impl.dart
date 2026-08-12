@@ -19,9 +19,7 @@ class HistoryRepositoryImpl implements HistoryRepository {
 
   Failure _mapError(Object error, String label) {
     return mapExceptionToFailure(
-      error is AppException
-          ? error
-          : UnexpectedException(label, cause: error),
+      error is AppException ? error : UnexpectedException(label, cause: error),
     );
   }
 
@@ -31,11 +29,13 @@ class HistoryRepositoryImpl implements HistoryRepository {
     required DateTime end,
   }) async* {
     try {
-      await for (final models
-          in dataSource.watchLogsInRange(start: start, end: end)) {
-        yield Right<Failure, List<WorkoutLog>>(
-          <WorkoutLog>[for (final m in models) m.toEntity()],
-        );
+      await for (final models in dataSource.watchLogsInRange(
+        start: start,
+        end: end,
+      )) {
+        yield Right<Failure, List<WorkoutLog>>(<WorkoutLog>[
+          for (final m in models) m.toEntity(),
+        ]);
       }
     } catch (error) {
       yield Left<Failure, List<WorkoutLog>>(
@@ -45,12 +45,14 @@ class HistoryRepositoryImpl implements HistoryRepository {
   }
 
   @override
-  Stream<Either<Failure, List<WorkoutLog>>> watchLogsForDay(DateTime day) async* {
+  Stream<Either<Failure, List<WorkoutLog>>> watchLogsForDay(
+    DateTime day,
+  ) async* {
     try {
       await for (final models in dataSource.watchLogsForDay(day)) {
-        yield Right<Failure, List<WorkoutLog>>(
-          <WorkoutLog>[for (final m in models) m.toEntity()],
-        );
+        yield Right<Failure, List<WorkoutLog>>(<WorkoutLog>[
+          for (final m in models) m.toEntity(),
+        ]);
       }
     } catch (error) {
       yield Left<Failure, List<WorkoutLog>>(
@@ -61,10 +63,14 @@ class HistoryRepositoryImpl implements HistoryRepository {
 
   @override
   Stream<Either<Failure, Map<int, List<WorkoutLogEntry>>>>
-      watchEntriesByLogForDay(DateTime day) async* {
+  watchEntriesByLogForDay(DateTime day) async* {
     try {
       await for (final map in dataSource.watchEntriesByLogForDay(day)) {
-        yield Right<Failure, Map<int, List<WorkoutLogEntry>>>(map);
+        // Translate logFid (Firestore document id, source of truth)
+        // back into the int hash the domain layer keys on.
+        yield Right<Failure, Map<int, List<WorkoutLogEntry>>>({
+          for (final entry in map.entries) entry.key.hashCode: entry.value,
+        });
       }
     } catch (error) {
       yield Left<Failure, Map<int, List<WorkoutLogEntry>>>(
@@ -79,16 +85,25 @@ class HistoryRepositoryImpl implements HistoryRepository {
   ) async {
     try {
       if (workoutIds.isEmpty) return const Right({});
-      final models = await dataSource.getWorkoutsByIds(workoutIds);
+      // workoutIds are int hashes of master firestoreIds. The data
+      // source needs the master firestoreIds (strings), so we map
+      // int → string first. Then we query `sessionWorkouts` by the
+      // `masterFirestoreId` *field* — not by document id — because the
+      // join row's own `firestoreId` (the doc id) is a different
+      // value, so a doc-id lookup would miss every row.
+      final idMap = await dataSource.getAllWorkoutFirestoreIds();
+      final masterFids = <String>[
+        for (final id in workoutIds)
+          if (idMap[id] != null) idMap[id]!,
+      ];
+      final models = await dataSource.getWorkoutsByMasterIds(masterFids);
       return Right<Failure, Map<int, Workout>>({
         for (final m in models) m.workoutId: m.toEntity(),
       });
     } on AppException catch (e) {
       return Left(mapExceptionToFailure(e));
     } catch (error) {
-      return Left(
-        UnexpectedFailure(message: 'Unexpected error', cause: error),
-      );
+      return Left(UnexpectedFailure(message: 'Unexpected error', cause: error));
     }
   }
 }

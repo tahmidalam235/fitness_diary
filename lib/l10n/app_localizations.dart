@@ -835,7 +835,7 @@ abstract class AppLocalizations {
   /// No description provided for @workoutFieldDefaultDuration.
   ///
   /// In en, this message translates to:
-  /// **'Default duration (seconds)'**
+  /// **'Default duration (minutes)'**
   String get workoutFieldDefaultDuration;
 
   /// No description provided for @workoutFieldDefaultWeight.
@@ -913,8 +913,8 @@ abstract class AppLocalizations {
   /// No description provided for @workoutListDuration.
   ///
   /// In en, this message translates to:
-  /// **'{seconds}s'**
-  String workoutListDuration(int seconds);
+  /// **'{minutes} min'**
+  String workoutListDuration(int minutes);
 
   /// No description provided for @workoutListWeight.
   ///

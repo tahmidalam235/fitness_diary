@@ -9,10 +9,7 @@ import '../../domain/entities/session.dart';
 
 /// Result returned from [SessionForm] via the [onSubmit] callback.
 class SessionFormResult {
-  const SessionFormResult({
-    required this.name,
-    required this.description,
-  });
+  const SessionFormResult({required this.name, required this.description});
 
   final String name;
   final String description;
@@ -20,11 +17,7 @@ class SessionFormResult {
 
 /// Stateful form widget for creating or editing a session.
 class SessionForm extends StatefulWidget {
-  const SessionForm({
-    this.initial,
-    required this.onSubmit,
-    super.key,
-  });
+  const SessionForm({this.initial, required this.onSubmit, super.key});
 
   /// Existing session when editing; `null` when creating.
   final Session? initial;
@@ -49,8 +42,9 @@ class _SessionFormState extends State<SessionForm> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.initial?.name ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.initial?.description ?? '');
+    _descriptionController = TextEditingController(
+      text: widget.initial?.description ?? '',
+    );
   }
 
   @override
@@ -66,10 +60,12 @@ class _SessionFormState extends State<SessionForm> {
     }
     setState(() => _submitting = true);
     try {
-      widget.onSubmit(SessionFormResult(
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-      ));
+      widget.onSubmit(
+        SessionFormResult(
+          name: _nameController.text.trim(),
+          description: _descriptionController.text.trim(),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _submitting = false);

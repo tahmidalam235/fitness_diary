@@ -4,7 +4,6 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../core/database/app_database.dart' show WorkoutLog;
 import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/routes/route_paths.dart';
@@ -18,6 +17,8 @@ import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
 import '../../../session/presentation/bloc/session_state.dart';
+import '../../../workout_log/data/models/workout_log_model.dart';
+import '../../../workout_log/domain/entities/workout_log.dart';
 
 /// Drill-down page for a specific month or year of workout history.
 ///
@@ -71,8 +72,18 @@ class HistoryPeriodPage extends StatelessWidget {
 
   static String _monthName(int m) {
     const names = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December',
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December',
     ];
     return names[(m - 1).clamp(0, 11)];
   }
@@ -120,10 +131,13 @@ class _HistoryPeriodViewState extends State<_HistoryPeriodView> {
 
   Stream<List<WorkoutLog>> _buildStream() {
     final dao = getIt<WorkoutLogDao>();
-    return dao.watchLogsInRange(
-      start: widget.rangeStart,
-      end: widget.rangeEnd,
-    );
+    return dao
+        .watchLogsInRange(start: widget.rangeStart, end: widget.rangeEnd)
+        .map(
+          (models) => <WorkoutLog>[
+            for (final WorkoutLogModel m in models) m.toEntity(),
+          ],
+        );
   }
 
   @override
@@ -133,7 +147,8 @@ class _HistoryPeriodViewState extends State<_HistoryPeriodView> {
     return BlocBuilder<SessionBloc, SessionState>(
       builder: (context, sessionState) {
         final sessionsById = <int, Session>{
-          for (final s in (sessionState is SessionLoaded
+          for (final s
+              in (sessionState is SessionLoaded
                   ? sessionState.sessions
                   : const <Session>[]))
             if (s.id != null) s.id!: s,
@@ -232,10 +247,7 @@ class _SummaryHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: _Stat(
-              label: 'WORKOUTS',
-              value: '$totalWorkouts',
-            ),
+            child: _Stat(label: 'WORKOUTS', value: '$totalWorkouts'),
           ),
           Container(
             width: 1,
@@ -243,10 +255,7 @@ class _SummaryHeader extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.3),
           ),
           Expanded(
-            child: _Stat(
-              label: 'DAYS',
-              value: '$distinctDays',
-            ),
+            child: _Stat(label: 'DAYS', value: '$distinctDays'),
           ),
           Container(
             width: 1,
@@ -254,10 +263,7 @@ class _SummaryHeader extends StatelessWidget {
             color: Colors.white.withValues(alpha: 0.3),
           ),
           Expanded(
-            child: _Stat(
-              label: 'SESSIONS',
-              value: '$sessions',
-            ),
+            child: _Stat(label: 'SESSIONS', value: '$sessions'),
           ),
         ],
       ),

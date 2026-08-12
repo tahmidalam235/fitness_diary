@@ -223,8 +223,20 @@ class _WorkoutFormView extends StatelessWidget {
                 final initial = state is WorkoutListLoaded
                     ? _findInitial(state)
                     : null;
+                // Fix edit-populate: the previous key resolved to the
+                // same `workoutId` before AND after the bloc loaded, so
+                // the form was never recreated when the initial values
+                // arrived — controllers kept their empty defaults. The
+                // suffix flips once the workout is found, forcing one
+                // rebuild with populated fields. New-workout (no
+                // workoutId) keeps the original key.
+                final key = workoutId == null
+                    ? ValueKey('new')
+                    : ValueKey(
+                        'edit-$workoutId-${initial != null ? 'loaded' : 'pending'}',
+                      );
                 return WorkoutForm(
-                  key: ValueKey(initial?.id ?? workoutId ?? 'new'),
+                  key: key,
                   initial: initial,
                   onSubmit: (result) => _onSubmit(context, result),
                 );

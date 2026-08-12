@@ -48,8 +48,8 @@ class DailyDetailsPage extends StatelessWidget {
     final validDate = DateTime(date.year, date.month, date.day);
 
     return BlocProvider<DailyDetailsBloc>(
-      create: (_) => getIt<DailyDetailsBloc>()
-        ..add(DaySelectedEvent(validDate)),
+      create: (_) =>
+          getIt<DailyDetailsBloc>()..add(DaySelectedEvent(validDate)),
       child: AppScaffold(
         title: l10n.dailyDetailsTitle,
         useNavigationRail: true,
@@ -76,8 +76,9 @@ class DailyDetailsPage extends StatelessWidget {
                   ),
                   borderRadius: BorderRadius.circular(AppRadius.lg),
                   border: Border.all(
-                    color: theme.colorScheme.outlineVariant
-                        .withValues(alpha: 0.4),
+                    color: theme.colorScheme.outlineVariant.withValues(
+                      alpha: 0.4,
+                    ),
                   ),
                 ),
                 child: Column(
@@ -143,8 +144,7 @@ class DailyDetailsPage extends StatelessWidget {
                       itemBuilder: (context, index) {
                         final group = state.groups[index];
                         return Padding(
-                          padding:
-                              const EdgeInsets.only(bottom: AppSpacing.sm),
+                          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: DayLogCard(
                             group: group,
                             sessionsById: state.sessionsById,

@@ -109,7 +109,31 @@ class _Body extends StatelessWidget {
             return IconButton(
               tooltip: l10n.commonSave,
               icon: const Icon(Icons.check_rounded),
-              onPressed: canSave ? () => context.pop() : null,
+              onPressed: canSave
+                  ? () {
+                      // Mirror the just-edited values into the workout
+                      // template (defaults) so the Session card reflects
+                      // them on return. Otherwise the entry's edits
+                      // only land in today's WorkoutLog row and the
+                      // session's WorkoutCard stays stale.
+                      // `canSave` ensures entry is non-null here.
+                      final entry = state.entry!;
+                      final w = state.workout;
+                      context.read<WorkoutListBloc>().add(
+                        UpdateWorkoutEvent(
+                          id: w.id,
+                          exerciseName: w.exerciseName,
+                          defaultSets: entry.sets ?? w.defaultSets,
+                          defaultReps: entry.reps ?? w.defaultReps,
+                          defaultDurationSeconds:
+                              entry.durationSeconds ?? w.defaultDurationSeconds,
+                          defaultWeight: entry.weight ?? w.defaultWeight,
+                          notes: w.notes,
+                        ),
+                      );
+                      context.pop();
+                    }
+                  : null,
             );
           },
         ),

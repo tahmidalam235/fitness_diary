@@ -24,8 +24,7 @@ class AddWorkoutsToTodayParams {
 /// Adds the supplied entries to today's workout log (creating the log
 /// lazily). Used by the Session Details "Add for Today's Session"
 /// action to bulk-seed today's tracked workouts.
-class AddWorkoutsToToday
-    extends UseCase<WorkoutLog, AddWorkoutsToTodayParams> {
+class AddWorkoutsToToday extends UseCase<WorkoutLog, AddWorkoutsToTodayParams> {
   const AddWorkoutsToToday({required this.repository});
 
   final WorkoutLogRepository repository;

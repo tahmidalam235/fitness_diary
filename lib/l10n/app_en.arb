@@ -202,7 +202,7 @@
   "workoutFieldNameTooShort": "Name must be at least 2 characters",
   "workoutFieldDefaultSets": "Default sets",
   "workoutFieldDefaultReps": "Default reps",
-  "workoutFieldDefaultDuration": "Default duration (seconds)",
+  "workoutFieldDefaultDuration": "Default duration (minutes)",
   "workoutFieldDefaultWeight": "Default weight",
   "workoutFieldNotes": "Notes",
   "workoutFieldNumberRequired": "Required",
@@ -226,10 +226,10 @@
       "reps": {"type": "int"}
     }
   },
-  "workoutListDuration": "{seconds}s",
+  "workoutListDuration": "{minutes} min",
   "@workoutListDuration": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "minutes": {"type": "int"}
     }
   },
   "workoutListWeight": "{weight} kg",

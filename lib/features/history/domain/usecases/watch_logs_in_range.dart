@@ -24,9 +24,6 @@ class WatchLogsInRange extends StreamUseCase<List<WorkoutLog>, DateRange> {
 
   @override
   Stream<Either<Failure, List<WorkoutLog>>> call(DateRange params) {
-    return repository.watchLogsInRange(
-      start: params.start,
-      end: params.end,
-    );
+    return repository.watchLogsInRange(start: params.start, end: params.end);
   }
 }

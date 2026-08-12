@@ -1,0 +1,25 @@
+{
+  "firestore": {
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "fitness-diary-335e1",
+          "appId": "1:1083389976216:android:cf4c893a016250ce3cbaed",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "fitness-diary-335e1",
+          "configurations": {
+            "android": "1:1083389976216:android:cf4c893a016250ce3cbaed",
+            "ios": "1:1083389976216:ios:fa6e8614187a371d3cbaed"
+          }
+        }
+      }
+    }
+  }
+}

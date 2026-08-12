@@ -18,6 +18,7 @@ import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import 'package:fitness_diary/features/today/presentation/bloc/today_workouts_bloc.dart';
 import '../../../workout/domain/entities/workout.dart';
+import '../../../workout/data/datasources/workout_local_datasource.dart';
 import '../../../workout/presentation/bloc/workout_list_bloc.dart';
 import '../../../workout/presentation/widgets/workout_card.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
@@ -131,6 +132,13 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
         .toList(growable: false);
     if (selected.isEmpty) return;
 
+    // Resolve each picked Workout's masterFirestoreId so the today
+    // page can join entries back to workout templates even if the int
+    // `workoutId` hashes don't agree across snapshots. The
+    // `Workout` entity doesn't carry the Firestore id, so we look it
+    // up via the local data source (which mirrors Firestore).
+    final idMap = await getIt<WorkoutLocalDataSource>().getAllWorkoutIds();
+
     // Prefill from the most recent prior entry per selected workout,
     // falling back to the template defaults when there's no history.
     final lastResult = await getIt<GetLastEntriesForWorkouts>()(
@@ -155,6 +163,7 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
             reps: prior?.reps ?? w.defaultReps,
             weight: prior?.weight ?? w.defaultWeight,
             durationSeconds: prior?.durationSeconds ?? w.defaultDurationSeconds,
+            workoutFirestoreId: idMap[w.workoutId],
           );
         }(),
     ];
@@ -439,9 +448,19 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
             if (state is WorkoutListLoaded) {
               return BlocBuilder<TodayWorkoutsBloc, TodayWorkoutsState>(
                 builder: (context, todayState) {
-                  final trackedIds = todayState is TodayWorkoutsLoaded
-                      ? todayState.entries.map((e) => e.workoutId).toSet()
-                      : <int>{};
+                  // Only render the list once we know which workouts are
+                  // already tracked for today. This prevents the "tick
+                  // mark flash" where already-picked workouts appear
+                  // unticked for a few frames.
+                  if (todayState is! TodayWorkoutsLoaded) {
+                    return const SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: AppLoadingIndicator(),
+                    );
+                  }
+
+                  final trackedIds =
+                      todayState.entries.map((e) => e.workoutId).toSet();
 
                   return SliverPadding(
                     padding: const EdgeInsets.fromLTRB(
@@ -621,15 +640,20 @@ class _WorkoutListSection extends StatelessWidget {
                           'workoutId': w.id.toString(),
                         },
                       ),
-                onEdit: selectMode
-                    ? () {}
-                    : () => context.pushNamed(
-                        RouteNames.workoutEdit,
-                        pathParameters: {
-                          'id': sessionId.toString(),
-                          'workoutId': w.id.toString(),
-                        },
-                      ),
+                // Fix today→edit navigation: the Today page's
+                // "Add Session" picker opens this page in select mode,
+                // and previously the 3-dot menu's Edit action was a
+                // no-op in that mode — tapping it did nothing. Allow
+                // navigation to the edit page in both modes so the
+                // user can manage a workout from the Today flow
+                // without first having to back out of select mode.
+                onEdit: () => context.pushNamed(
+                  RouteNames.workoutEdit,
+                  pathParameters: {
+                    'id': sessionId.toString(),
+                    'workoutId': w.id.toString(),
+                  },
+                ),
                 onDelete: selectMode
                     ? () {}
                     : () => _confirmDelete(context, w.id, w.exerciseName),

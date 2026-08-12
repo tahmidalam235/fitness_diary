@@ -31,28 +31,31 @@ class DaySetSummaryTile extends StatelessWidget {
     final chips = <Widget>[];
 
     if (entry.sets != null) {
-      chips.add(_Chip(
-        label: 'Sets',
-        value: entry.sets!.toString(),
-      ));
+      chips.add(_Chip(label: 'Sets', value: entry.sets!.toString()));
     }
     if (entry.reps != null) {
-      chips.add(_Chip(
-        label: l10n.dailyDetailsCompletedReps,
-        value: entry.reps!.toString(),
-      ));
+      chips.add(
+        _Chip(
+          label: l10n.dailyDetailsCompletedReps,
+          value: entry.reps!.toString(),
+        ),
+      );
     }
     if (entry.weight != null) {
-      chips.add(_Chip(
-        label: l10n.dailyDetailsWeightUsed,
-        value: '${entry.weight!.toStringAsFixed(1)} kg',
-      ));
+      chips.add(
+        _Chip(
+          label: l10n.dailyDetailsWeightUsed,
+          value: '${entry.weight!.toStringAsFixed(1)} kg',
+        ),
+      );
     }
     if (entry.durationSeconds != null) {
-      chips.add(_Chip(
-        label: l10n.dailyDetailsDuration,
-        value: _formatDuration(entry.durationSeconds!),
-      ));
+      chips.add(
+        _Chip(
+          label: l10n.dailyDetailsDuration,
+          value: _formatDuration(entry.durationSeconds!),
+        ),
+      );
     }
 
     return Padding(
@@ -121,9 +124,7 @@ class _Chip extends StatelessWidget {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.sm),
-        border: Border.all(
-          color: theme.colorScheme.outlineVariant,
-        ),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Text(
         '$label: $value',

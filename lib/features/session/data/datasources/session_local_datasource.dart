@@ -1,14 +1,13 @@
-import 'package:drift/drift.dart';
-
-import '../../../../core/database/app_database.dart' as db show SessionsCompanion;
 import '../../../../core/database/daos/session_dao.dart';
 import '../../../../core/error/exceptions.dart';
+import '../../../../core/sync/firestore_id.dart';
 import '../models/session_model.dart';
 
-/// Low-level local data source wrapping the Drift [SessionDao].
+/// Firestore-backed adapter for the session feature.
 ///
-/// Translates raw Drift errors into [AppException] so the repository can
-/// convert them into user-facing [Failure]s without coupling to Drift.
+/// Internally delegates to [SessionDao] (which talks to Firestore via
+/// [SyncService]). Method signatures match the original Drift-backed
+/// data source so the repository layer doesn't change.
 class SessionLocalDataSource {
   const SessionLocalDataSource({required this.dao});
 
@@ -16,66 +15,35 @@ class SessionLocalDataSource {
 
   Future<List<SessionModel>> getAll() async {
     try {
-      final rows = await dao.getAllSessions();
-      return <SessionModel>[
-        for (final row in rows) SessionModel.fromDrift(row),
-      ];
-    } on AppException {
-      rethrow;
+      return await dao.getAllSessions();
     } catch (error) {
-      throw DatabaseException(
-        'Failed to load sessions',
-        cause: error,
-      );
+      throw DatabaseException('Failed to load sessions', cause: error);
     }
   }
 
   Stream<List<SessionModel>> watchAll() {
     try {
-      return dao.watchSessions().map<List<SessionModel>>(
-            (rows) => <SessionModel>[
-              for (final row in rows) SessionModel.fromDrift(row),
-            ],
-          );
+      return dao.watchSessions();
     } catch (error) {
-      throw DatabaseException(
-        'Failed to watch sessions',
-        cause: error,
-      );
+      throw DatabaseException('Failed to watch sessions', cause: error);
     }
   }
 
-  Future<SessionModel?> getById(int id) async {
+  Future<SessionModel?> getById(String id) async {
     try {
       final row = await dao.getSessionById(id);
-      if (row == null) {
-        throw NotFoundException('Session $id not found');
-      }
-      return SessionModel.fromDrift(row);
-    } on AppException {
-      rethrow;
+      return row;
     } catch (error) {
-      throw DatabaseException(
-        'Failed to load session $id',
-        cause: error,
-      );
+      throw DatabaseException('Failed to load session $id', cause: error);
     }
   }
 
-  Future<List<SessionModel>> getByIds(List<int> ids) async {
+  Future<List<SessionModel>> getByIds(List<String> ids) async {
     try {
       if (ids.isEmpty) return const <SessionModel>[];
-      final rows = await dao.getSessionsByIds(ids);
-      return <SessionModel>[
-        for (final row in rows) SessionModel.fromDrift(row),
-      ];
-    } on AppException {
-      rethrow;
+      return await dao.getSessionsByIds(ids);
     } catch (error) {
-      throw DatabaseException(
-        'Failed to load sessions by ids',
-        cause: error,
-      );
+      throw DatabaseException('Failed to load sessions by ids', cause: error);
     }
   }
 
@@ -85,30 +53,28 @@ class SessionLocalDataSource {
   }) async {
     try {
       final now = DateTime.now();
-      final companion = db.SessionsCompanion.insert(
+      final fid = newFirestoreId();
+      final model = SessionModel(
+        id: fid.hashCode,
         name: name,
-        description: Value(description),
-        createdAt: Value(now),
-        updatedAt: Value<DateTime?>(now),
+        description: description,
+        createdAt: now,
+        updatedAt: now,
+        workoutCount: 0,
+        firestoreId: fid,
       );
-      final id = await dao.insertSession(companion);
-      final row = await dao.getSessionById(id);
-      if (row == null) {
-        throw const UnexpectedException('Insert succeeded but row missing');
-      }
-      return SessionModel.fromDrift(row);
-    } on AppException {
-      rethrow;
+      await dao.insertSession(model);
+      // Re-read so the caller's model carries any cloud-side
+      // canonicalization.
+      final fresh = await dao.getSessionById(fid);
+      return fresh ?? model;
     } catch (error) {
-      throw DatabaseException(
-        'Failed to create session',
-        cause: error,
-      );
+      throw DatabaseException('Failed to create session', cause: error);
     }
   }
 
   Future<SessionModel> update({
-    required int id,
+    required String id,
     required String name,
     required String description,
   }) async {
@@ -121,30 +87,38 @@ class SessionLocalDataSource {
       final updated = existing.copyWith(
         name: name,
         description: description,
-        updatedAt: Value<DateTime?>(now),
+        updatedAt: now,
       );
       await dao.updateSession(updated);
-      return SessionModel.fromDrift(updated);
-    } on AppException {
-      rethrow;
+      return updated;
     } catch (error) {
-      throw DatabaseException(
-        'Failed to update session',
-        cause: error,
-      );
+      throw DatabaseException('Failed to update session', cause: error);
     }
   }
 
-  Future<void> delete(int id) async {
+  Future<void> delete(String id) async {
     try {
       await dao.deleteSession(id);
-    } on AppException {
-      rethrow;
     } catch (error) {
-      throw DatabaseException(
-        'Failed to delete session',
-        cause: error,
-      );
+      throw DatabaseException('Failed to delete session', cause: error);
     }
+  }
+}
+
+extension on SessionModel {
+  SessionModel copyWith({
+    String? name,
+    String? description,
+    DateTime? updatedAt,
+  }) {
+    return SessionModel(
+      id: id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      createdAt: createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      workoutCount: workoutCount,
+      firestoreId: firestoreId,
+    );
   }
 }

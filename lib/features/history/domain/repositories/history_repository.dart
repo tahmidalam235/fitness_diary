@@ -27,7 +27,7 @@ abstract class HistoryRepository {
   /// calendar [day], grouped by `WorkoutLog.id` so the UI can render one
   /// card per session.
   Stream<Either<Failure, Map<int, List<WorkoutLogEntry>>>>
-      watchEntriesByLogForDay(DateTime day);
+  watchEntriesByLogForDay(DateTime day);
 
   /// One-shot lookup of master workouts by id. Used by the Daily Details
   /// page to render exercise names without N round trips.

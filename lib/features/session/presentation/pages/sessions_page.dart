@@ -32,8 +32,7 @@ class SessionsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<SessionBloc>(
-      create: (_) =>
-          getIt<SessionBloc>()..add(const WatchSessionsEvent()),
+      create: (_) => getIt<SessionBloc>()..add(const WatchSessionsEvent()),
       child: const _SessionsView(),
     );
   }
@@ -61,10 +60,12 @@ class _SessionsViewState extends State<_SessionsView> {
     if (q.isEmpty) {
       return source;
     }
-    return source.where((s) {
-      return s.name.toLowerCase().contains(q) ||
-          s.description.toLowerCase().contains(q);
-    }).toList(growable: false);
+    return source
+        .where((s) {
+          return s.name.toLowerCase().contains(q) ||
+              s.description.toLowerCase().contains(q);
+        })
+        .toList(growable: false);
   }
 
   @override
@@ -85,9 +86,9 @@ class _SessionsViewState extends State<_SessionsView> {
             curr is SessionError && prev is! SessionError,
         listener: (context, state) {
           if (state is SessionError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.failure.message)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.failure.message)));
           }
         },
         builder: (context, state) {
@@ -171,8 +172,7 @@ class _SessionsViewState extends State<_SessionsView> {
                         AppSpacing.lg,
                         AppSpacing.xxxl,
                       ),
-                      gridDelegate:
-                          SliverGridDelegateWithFixedCrossAxisCount(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: crossAxisCount,
                         mainAxisSpacing: AppSpacing.lg,
                         crossAxisSpacing: AppSpacing.lg,
@@ -191,8 +191,7 @@ class _SessionsViewState extends State<_SessionsView> {
                             RouteNames.sessionEdit,
                             pathParameters: {'id': session.id.toString()},
                           ),
-                          onDelete: () =>
-                              _confirmDelete(context, session.id!),
+                          onDelete: () => _confirmDelete(context, session.id!),
                         );
                       },
                     );

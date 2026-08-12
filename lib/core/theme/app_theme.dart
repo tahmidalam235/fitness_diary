@@ -78,9 +78,7 @@ class AppTheme {
           : const Color(0xFFF8FAFC), // slate-50 — subtle warm-bright
       appBarTheme: AppBarTheme(
         centerTitle: false,
-        backgroundColor: isDark
-            ? colorScheme.surface
-            : const Color(0xFFF8FAFC),
+        backgroundColor: isDark ? colorScheme.surface : const Color(0xFFF8FAFC),
         foregroundColor: colorScheme.onSurface,
         elevation: 0,
         scrolledUnderElevation: 0,
@@ -100,9 +98,7 @@ class AppTheme {
         elevation: 0,
         clipBehavior: Clip.antiAlias,
         margin: EdgeInsets.zero,
-        color: isDark
-            ? colorScheme.surfaceContainerHigh
-            : Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHigh : Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -148,9 +144,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: isDark
-            ? colorScheme.surfaceContainerHighest
-            : Colors.white,
+        fillColor: isDark ? colorScheme.surfaceContainerHighest : Colors.white,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 16,
@@ -171,10 +165,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
-          borderSide: BorderSide(
-            color: colorScheme.primary,
-            width: 2,
-          ),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),
@@ -194,29 +185,21 @@ class AppTheme {
         ),
       ),
       navigationDrawerTheme: NavigationDrawerThemeData(
-        backgroundColor: isDark
-            ? colorScheme.surface
-            : Colors.white,
+        backgroundColor: isDark ? colorScheme.surface : Colors.white,
         indicatorColor: colorScheme.primaryContainer,
         indicatorShape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(AppRadius.pill)),
         ),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: isDark
-            ? colorScheme.surface
-            : Colors.white,
+        backgroundColor: isDark ? colorScheme.surface : Colors.white,
         indicatorColor: colorScheme.primaryContainer,
-        selectedIconTheme: IconThemeData(
-          color: colorScheme.onPrimaryContainer,
-        ),
+        selectedIconTheme: IconThemeData(color: colorScheme.onPrimaryContainer),
         selectedLabelTextStyle: TextStyle(
           color: colorScheme.onSurface,
           fontWeight: FontWeight.w700,
         ),
-        unselectedIconTheme: IconThemeData(
-          color: colorScheme.onSurfaceVariant,
-        ),
+        unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
         unselectedLabelTextStyle: TextStyle(
           color: colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w500,
@@ -226,9 +209,7 @@ class AppTheme {
         ),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: isDark
-            ? colorScheme.surface
-            : Colors.white,
+        backgroundColor: isDark ? colorScheme.surface : Colors.white,
         surfaceTintColor: Colors.transparent,
         elevation: 12,
         shadowColor: colorScheme.shadow.withValues(alpha: 0.18),
@@ -276,9 +257,7 @@ class AppTheme {
       ),
       popupMenuTheme: PopupMenuThemeData(
         elevation: 10,
-        color: isDark
-            ? colorScheme.surfaceContainerHigh
-            : Colors.white,
+        color: isDark ? colorScheme.surfaceContainerHigh : Colors.white,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppRadius.md),

@@ -17,9 +17,7 @@ abstract class SessionRepository {
 
   /// Bulk lookup by id — returns a map keyed by session id for callers
   /// that want to resolve names without N round trips.
-  Future<Either<Failure, Map<int, Session>>> getSessionsByIds(
-    List<int> ids,
-  );
+  Future<Either<Failure, Map<int, Session>>> getSessionsByIds(List<int> ids);
 
   Future<Either<Failure, Session>> createSession({
     required String name,

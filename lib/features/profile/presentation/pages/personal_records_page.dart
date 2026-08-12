@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/database/app_database.dart' show WorkoutLogEntry;
 import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -11,10 +10,11 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../history/domain/usecases/get_workouts_by_ids.dart';
+import '../../../workout_log/data/models/workout_log_entry_model.dart';
 
 /// Personal records: per-exercise max weight ever logged.
 ///
-/// Aggregates `WorkoutLogEntry.weight` (the heaviest set) for every
+/// Aggregates `WorkoutLogEntryModel.weight` (the heaviest set) for every
 /// distinct workout id across all logs, then renders them as a sorted
 /// list with PRs highlighted. Streams live from
 /// [WorkoutLogDao.watchAllLogs] so a new PR shows up immediately.
@@ -66,11 +66,11 @@ class _PersonalRecordsPageState extends State<PersonalRecordsPage> {
         listenable: settingsService,
         builder: (context, _) {
           final unit = settingsService.unit;
-          return StreamBuilder<List<WorkoutLogEntry>>(
+          return StreamBuilder<List<WorkoutLogEntryModel>>(
             stream: dao.watchAllLogs().asyncMap((logs) async {
-              final entries = <WorkoutLogEntry>[];
+              final entries = <WorkoutLogEntryModel>[];
               for (final log in logs) {
-                final logEntries = await dao.watchEntriesForLog(log.id).first;
+                final logEntries = await dao.getEntriesForLogById(log.id);
                 entries.addAll(logEntries);
               }
               return entries;
@@ -118,8 +118,8 @@ class _PersonalRecordsPageState extends State<PersonalRecordsPage> {
     );
   }
 
-  List<_PrRecord> _computePrs(List<WorkoutLogEntry> entries) {
-    final byWorkout = <int, WorkoutLogEntry>{};
+  List<_PrRecord> _computePrs(List<WorkoutLogEntryModel> entries) {
+    final byWorkout = <int, WorkoutLogEntryModel>{};
     for (final e in entries) {
       final w = e.weight ?? 0;
       final existing = byWorkout[e.workoutId];
@@ -133,7 +133,7 @@ class _PersonalRecordsPageState extends State<PersonalRecordsPage> {
             workoutId: e.workoutId,
             weight: e.weight ?? 0,
             reps: e.reps ?? 0,
-            loggedAt: e.createdAt,
+            loggedAt: e.createdAt ?? DateTime.now(),
           ),
         )
         .toList()

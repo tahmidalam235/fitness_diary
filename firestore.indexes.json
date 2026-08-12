@@ -1,0 +1,54 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "workoutLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionFirestoreId", "order": "ASCENDING" },
+        { "fieldPath": "performedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workoutLogs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "performedAt", "order": "ASCENDING" },
+        { "fieldPath": "performedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "sessionWorkouts",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "sessionFirestoreId", "order": "ASCENDING" },
+        { "fieldPath": "position", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workoutLogEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workoutLogFirestoreId", "order": "ASCENDING" },
+        { "fieldPath": "position", "order": "ASCENDING" },
+        { "fieldPath": "setIndex", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "workoutLogEntries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workoutFirestoreId", "order": "ASCENDING" },
+        { "fieldPath": "performedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "freezes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "day", "order": "ASCENDING" },
+        { "fieldPath": "day", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

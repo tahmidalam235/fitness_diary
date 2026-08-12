@@ -236,7 +236,7 @@ class _RangeColumn extends StatelessWidget {
         int sets = 0;
         final dao = getIt<WorkoutLogDao>();
         for (final l in logs) {
-          final entries = await dao.getEntriesForLog(l.id);
+          final entries = await dao.getEntriesForLogById(l.id);
           sets += entries.length;
         }
         return _RangeData(logs: logs, totalSets: sets);

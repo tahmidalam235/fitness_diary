@@ -215,20 +215,28 @@ class WorkoutTrackingBloc
     await _sub?.cancel();
     _sub = null;
 
-    _sub = _watchTodayEntriesByWorkout(sessionId).listen(
-      (result) => add(
+    // Subscribe to the entries stream and capture the first emission
+    // via a Completer so the seed-or-load decision below sees the
+    // same snapshot the persistent subscription will react to. This
+    // removes the race where a separate `.first` call used to resolve
+    // with an empty map before the subscription's first event
+    // arrived — that race used to enter the seed-from-prior branch
+    // and overwrite today's already-saved values with defaults.
+    final firstResultCompleter =
+        Completer<Either<Failure, Map<int, WorkoutLogEntry>>>();
+    _sub = _watchTodayEntriesByWorkout(sessionId).listen((result) {
+      if (isClosed) return;
+      if (!firstResultCompleter.isCompleted) {
+        firstResultCompleter.complete(result);
+        return;
+      }
+      add(
         _EntriesReceivedEvent(
           result.getOrElse((_) => const <int, WorkoutLogEntry>{}),
         ),
-      ),
-    );
-
-    // If today's log doesn't yet have an entry for this workout, seed
-    // one pre-filled from the most recent prior record (or the template
-    // defaults if there is no prior record). The DB insert will trigger
-    // the stream subscription above to emit a fresh snapshot, which
-    // will then transition us out of Loading in `_onEntriesReceived`.
-    final entriesResult = await _watchTodayEntriesByWorkout(sessionId).first;
+      );
+    });
+    final entriesResult = await firstResultCompleter.future;
     final entriesByWorkout = entriesResult.getOrElse(
       (_) => const <int, WorkoutLogEntry>{},
     );
@@ -247,7 +255,19 @@ class WorkoutTrackingBloc
           entries: <WorkoutLogEntry>[seed],
         ),
       );
-      addResult.fold((failure) => emit(WorkoutTrackingError(failure)), (_) {});
+      // Surface a hard error if the seed write failed. If it
+      // succeeded, fall through and let the subscription deliver the
+      // final state — the data source is idempotent on
+      // `workoutFirestoreId`, so an existing entry won't be
+      // overwritten even if we reached this branch due to a race.
+      final failure = addResult.fold(
+        (f) => f,
+        (_) => null as Failure?,
+      );
+      if (failure != null) {
+        emit(WorkoutTrackingError(failure));
+        return;
+      }
       return;
     }
 
@@ -305,6 +325,8 @@ class WorkoutTrackingBloc
           reps: workout.defaultReps,
           weight: workout.defaultWeight,
           durationSeconds: workout.defaultDurationSeconds,
+          workoutLogFirestoreId: current.workoutLog.firestoreId,
+          workoutFirestoreId: workout.masterFirestoreId,
         );
     final updated = base.copyWith(
       sets: event.sets ?? base.sets,
@@ -339,6 +361,12 @@ class WorkoutTrackingBloc
   /// Builds the seed row for the first time the workout is opened
   /// today: prefer the most recent prior entry, fall back to the
   /// template's `defaultSets/Reps/Duration/Weight`.
+  ///
+  /// Stamps `workoutFirestoreId` from the master workout so the data
+  /// source's `watchTodayEntriesByWorkout` filter doesn't drop this
+  /// row as a legacy entry — without it the today page never sees the
+  /// picked workout, and edits to it have no visible effect on the
+  /// today card.
   WorkoutLogEntry _seedEntry({
     required WorkoutLog log,
     required Workout workout,
@@ -355,6 +383,8 @@ class WorkoutTrackingBloc
       weight: prior?.weight ?? workout.defaultWeight,
       durationSeconds: prior?.durationSeconds ?? workout.defaultDurationSeconds,
       notes: '',
+      workoutLogFirestoreId: log.firestoreId,
+      workoutFirestoreId: workout.masterFirestoreId,
     );
   }
 

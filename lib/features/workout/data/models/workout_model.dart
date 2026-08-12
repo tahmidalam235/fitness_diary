@@ -1,11 +1,12 @@
-import '../../../../core/database/app_database.dart' as db;
 import '../../domain/entities/workout.dart';
 
-/// Maps between Drift rows and the [Workout] domain entity.
+/// JSON adapter for [Workout].
 ///
-/// Combines a master [db.Workout] row with its per-session
-/// [db.SessionWorkout] join row so the UI can read everything from a
-/// single entity.
+/// Source of truth lives in Firestore: every [WorkoutModel] carries
+/// both `firestoreId` / `masterFirestoreId` (the Firestore document
+/// ids, source of truth) and `id` / `workoutId` (ints derived from
+/// `firestoreId.hashCode` for backwards-compat with the int-keyed
+/// domain layer).
 class WorkoutModel {
   const WorkoutModel({
     required this.id,
@@ -18,38 +19,38 @@ class WorkoutModel {
     required this.defaultDurationSeconds,
     required this.defaultWeight,
     required this.notes,
+    this.firestoreId,
+    this.masterFirestoreId,
+    this.sessionFirestoreId,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  factory WorkoutModel.fromJoin(db.Workout master, db.SessionWorkout join) {
+  /// Builds a [WorkoutModel] from a Firestore document. The local int
+  /// `id` / `workoutId` / `sessionId` are derived from the
+  /// corresponding firestoreId hashes.
+  factory WorkoutModel.fromJson(Map<String, dynamic> json) {
+    final joinFid = json['firestoreId'] as String;
+    final masterFid = json['masterFirestoreId'] as String;
+    final sessionFid = json['sessionFirestoreId'] as String?;
     return WorkoutModel(
-      id: join.id,
-      sessionId: join.sessionId,
-      workoutId: join.workoutId,
-      exerciseName: master.exerciseName,
-      position: join.position,
-      defaultSets: join.defaultSets,
-      defaultReps: join.defaultReps,
-      defaultDurationSeconds: join.defaultDurationSeconds,
-      defaultWeight: join.defaultWeight,
-      notes: join.notes,
-    );
-  }
-
-  /// Builds a [WorkoutModel] from only the master workout row. Used by the
-  /// history path where we need the master workout's name but don't have
-  /// a join row in scope. Join-only fields default to safe placeholders.
-  factory WorkoutModel.fromMaster(db.Workout master) {
-    return WorkoutModel(
-      id: master.id,
-      sessionId: 0,
-      workoutId: master.id,
-      exerciseName: master.exerciseName,
-      position: 0,
-      defaultSets: 0,
-      defaultReps: 0,
-      defaultDurationSeconds: null,
-      defaultWeight: null,
-      notes: '',
+      id: joinFid.hashCode,
+      sessionId: sessionFid?.hashCode ?? 0,
+      workoutId: masterFid.hashCode,
+      exerciseName: json['exerciseName'] as String,
+      position: json['position'] as int,
+      defaultSets: json['defaultSets'] as int,
+      defaultReps: json['defaultReps'] as int,
+      defaultDurationSeconds: json['defaultDurationSeconds'] as int?,
+      defaultWeight: (json['defaultWeight'] as num?)?.toDouble(),
+      notes: (json['notes'] as String?) ?? '',
+      firestoreId: joinFid,
+      masterFirestoreId: masterFid,
+      sessionFirestoreId: sessionFid,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
+          : null,
     );
   }
 
@@ -63,6 +64,11 @@ class WorkoutModel {
   final int? defaultDurationSeconds;
   final double? defaultWeight;
   final String notes;
+  final String? firestoreId;
+  final String? masterFirestoreId;
+  final String? sessionFirestoreId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   Workout toEntity() {
     return Workout(
@@ -76,6 +82,23 @@ class WorkoutModel {
       defaultDurationSeconds: defaultDurationSeconds,
       defaultWeight: defaultWeight,
       notes: notes,
+      masterFirestoreId: masterFirestoreId,
     );
   }
+
+  /// JSON shape for cloud sync.
+  Map<String, dynamic> toJson() => {
+    'firestoreId': firestoreId,
+    'masterFirestoreId': masterFirestoreId,
+    'sessionFirestoreId': sessionFirestoreId,
+    'exerciseName': exerciseName,
+    'position': position,
+    'defaultSets': defaultSets,
+    'defaultReps': defaultReps,
+    'defaultDurationSeconds': defaultDurationSeconds,
+    'defaultWeight': defaultWeight,
+    'notes': notes,
+    'createdAt': (createdAt ?? DateTime.now()).millisecondsSinceEpoch,
+    'updatedAt': updatedAt?.millisecondsSinceEpoch,
+  };
 }

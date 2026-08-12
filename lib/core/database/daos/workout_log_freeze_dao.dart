@@ -1,71 +1,50 @@
-import 'package:drift/drift.dart';
+import '../../sync/sync_service.dart';
+import '../../../features/history/data/models/freeze_day_model.dart';
 
-import '../app_database.dart';
-import '../tables/workout_log_freezes_table.dart';
-
-part 'workout_log_freeze_dao.g.dart';
-
-/// Data-access object for the [WorkoutLogFreezes] table.
+/// Firestore-backed replacement for the old Drift `WorkoutLogFreezeDao`.
 ///
-/// The streak-freeze feature is intentionally narrow: it only needs to
-/// (a) toggle a day on/off, (b) observe all currently-frozen days, and
-/// (c) hand the frozen set to the streak calculator.
-@DriftAccessor(tables: [WorkoutLogFreezes])
-class WorkoutLogFreezeDao
-    extends DatabaseAccessor<AppDatabase> with _$WorkoutLogFreezeDaoMixin {
-  WorkoutLogFreezeDao(super.db);
+/// All methods delegate to [SyncService]. The return shapes are kept
+/// close to the original (set/date-keyed maps, lists of `FreezeDayModel`)
+/// so the streak feature, freeze page, and history repository don't need
+/// to change.
+class WorkoutLogFreezeDao {
+  WorkoutLogFreezeDao(this._sync);
 
-  /// Idempotent insert. Re-inserting the same [day] is a no-op (we
-  /// rely on the UNIQUE INDEX on `day` rather than a precondition
-  /// read, so the call is still O(1)).
-  ///
-  /// Returns the inserted row id, or 0 if the row already existed.
-  Future<int> insertFreeze(WorkoutLogFreezesCompanion row) async {
-    return into(workoutLogFreezes)
-        .insert(row, mode: InsertMode.insertOrIgnore);
+  final SyncService _sync;
+
+  /// Inserts a freeze for [day] (idempotent on Firestore: if a freeze
+  /// already exists for that day, it is overwritten with [note] /
+  /// `updatedAt`). Returns the new freeze's `firestoreId` (a positive
+  /// int hash for legacy-shape compatibility) or `0` if no uid.
+  Future<int> insertFreeze({
+    required DateTime day,
+    String note = '',
+    DateTime? updatedAt,
+  }) async {
+    final fid = await _sync.insertFreeze(day: day, note: note);
+    return fid.isEmpty ? 0 : fid.hashCode;
   }
 
   /// Removes the freeze for the half-open range `[day, day + 1 day)`.
-  /// Returns the number of rows deleted (0 if no freeze existed).
-  Future<int> deleteFreezeForDay(DateTime day) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    return (delete(workoutLogFreezes)
-          ..where(
-            (tbl) =>
-                tbl.day.isBiggerOrEqualValue(start) &
-                tbl.day.isSmallerThanValue(end),
-          ))
-        .go();
+  Future<int> deleteFreezeForDay(DateTime day) async {
+    final rows = await _sync.selectFreezesForDay(day);
+    for (final row in rows) {
+      if (row.firestoreId.isNotEmpty) {
+        await _sync.deleteFreeze(row.firestoreId);
+      }
+    }
+    return rows.length;
   }
+
+  /// Returns any freeze rows for the half-open range `[day, day + 1 day)`.
+  Future<List<FreezeDayModel>> selectFreezesForDay(DateTime day) =>
+      _sync.selectFreezesForDay(day);
 
   /// Reactive stream of every frozen day, normalized to midnight local.
-  /// The streak calc treats `Set<DateTime>`-style membership so the
-  /// date-only normalization matters.
-  Stream<Set<DateTime>> watchFrozenDays() {
-    return (select(workoutLogFreezes)..orderBy([(t) => OrderingTerm.asc(t.day)]))
-        .watch()
-        .map(
-          (rows) => <DateTime>{
-            for (final r in rows)
-              DateTime(r.day.year, r.day.month, r.day.day),
-          },
-        );
-  }
+  Stream<Set<DateTime>> watchFrozenDays() => _sync.watchFrozenDays();
 
-  /// Reactive stream of full freeze rows in a range. Used by the
-  /// freeze page to render the toggle strip.
-  Stream<List<WorkoutLogFreeze>> watchFreezesInRange({
+  Stream<List<FreezeDayModel>> watchFreezesInRange({
     required DateTime start,
     required DateTime end,
-  }) {
-    return (select(workoutLogFreezes)
-          ..where(
-            (tbl) =>
-                tbl.day.isBiggerOrEqualValue(start) &
-                tbl.day.isSmallerThanValue(end),
-          )
-          ..orderBy([(t) => OrderingTerm.desc(t.day)]))
-        .watch();
-  }
+  }) => _sync.watchFreezesInRange(start: start, end: end);
 }

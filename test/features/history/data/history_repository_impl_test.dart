@@ -96,8 +96,8 @@ void main() {
         weight: 60.0,
       );
       when(() => ds.watchEntriesByLogForDay(any())).thenAnswer(
-        (_) => Stream<Map<int, List<entity.WorkoutLogEntry>>>.value({
-          1: [entry],
+        (_) => Stream<Map<String, List<entity.WorkoutLogEntry>>>.value({
+          '1': [entry],
         }),
       );
       final result = await repo
@@ -105,8 +105,11 @@ void main() {
           .first;
       expect(result.isRight, isTrue);
       result.fold((_) => fail('expected Right'), (map) {
-        expect(map[1], hasLength(1));
-        expect(map[1]!.first.reps, 10);
+        // The repository keys on `logFid.hashCode` (the int the domain
+        // layer stores as `WorkoutLog.id`), so look up by that.
+        final key = '1'.hashCode;
+        expect(map[key], hasLength(1));
+        expect(map[key]!.first.reps, 10);
       });
     });
   });
@@ -133,10 +136,14 @@ void main() {
         defaultDurationSeconds: null,
         defaultWeight: null,
         notes: '',
+        masterFirestoreId: 'master-5',
       );
       when(
         () => ds.getWorkoutsByIds(any()),
       ).thenAnswer((_) async => <WorkoutModel>[model]);
+      when(() => ds.getAllWorkoutFirestoreIds()).thenAnswer(
+        (_) async => <int, String>{5: 'master-5'},
+      );
 
       final result = await repo.getWorkoutsByIds([5]);
       expect(result.isRight, isTrue);

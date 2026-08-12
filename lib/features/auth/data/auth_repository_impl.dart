@@ -1,32 +1,48 @@
-import 'package:drift/drift.dart' show Value;
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../../core/database/app_database.dart';
-import '../../../core/database/daos/auth_dao.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/utils/either.dart';
 import '../../../core/utils/unit.dart';
 import '../domain/entities/auth_user.dart';
 import '../domain/repositories/auth_repository.dart';
-import 'password_hasher.dart';
 
-/// SQLite + SharedPreferences-backed auth repository. Passwords are
-/// salted + hashed via [PasswordHasher] before insertion; the
-/// plaintext is never written to disk or shared preferences.
+/// Firebase-backed auth repository. Replaces the previous local
+/// SQLite + SharedPreferences implementation.
+///
+/// Firebase Authentication requires an email-shaped identifier, so we
+/// synthesize one from the chosen username (`{username}@fitnessdiary.local`).
+/// The user-supplied email (collected at signup) is preserved in a
+/// Firestore profile doc keyed by the Firebase uid, but is never used
+/// to log in — login still works with just username + password.
+///
+/// Firestore access is gated by the rules in `firestore.rules` at the
+/// project root. Deploy them via the Firebase console or with
+/// `firebase deploy --only firestore:rules`.
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl({
-    required AuthDao dao,
-    SharedPreferences? prefs,
-  })  : _dao = dao,
-        _prefs = prefs;
+  AuthRepositoryImpl();
 
-  final AuthDao _dao;
-  SharedPreferences? _prefs;
+  static const _emailDomain = '@fitnessdiary.local';
 
-  static const _kAuthUserId = 'auth_user_id';
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<SharedPreferences> _getPrefs() async {
-    return _prefs ??= await SharedPreferences.getInstance();
+  /// Map a public username to the synthesized Firebase auth email.
+  static String _authEmail(String username) =>
+      '${username.trim().toLowerCase()}$_emailDomain';
+
+  /// Resolve the Firebase uid for a given username, or null if no such
+  /// account exists. Uses the public `usernames` collection as a lookup
+  /// index so we can map username -> uid without exposing the synthesized
+  /// email to the UI layer.
+  Future<String?> _uidForUsername(String username) async {
+    final snap = await _firestore
+        .collection('usernames')
+        .doc(username.trim().toLowerCase())
+        .get();
+    final data = snap.data();
+    if (data == null) return null;
+    return data['uid'] as String?;
   }
 
   @override
@@ -48,9 +64,20 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(ValidationFailure(errors: errors));
     }
 
+    final usernameKey = username.trim().toLowerCase();
+    final authEmail = _authEmail(username);
+
     try {
-      final existing = await _dao.findByUsername(username);
-      if (existing != null) {
+      // Reject usernames that are already taken — we can't rely on
+      // Firebase's createUserWithEmailAndPassword for this because
+      // we synthesize the email from the username, so two different
+      // usernames could collide on the same email only if the
+      // username-collision happens first.
+      final usernameDoc = await _firestore
+          .collection('usernames')
+          .doc(usernameKey)
+          .get();
+      if (usernameDoc.exists) {
         return const Left(
           AuthFailure(
             code: AuthFailureCode.usernameTaken,
@@ -59,24 +86,67 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final hashed = PasswordHasher.hash(password);
-      final id = await _dao.insertUser(
-        UsersCompanion(
-          username: Value(username),
-          passwordHash: Value(hashed.hashB64),
-          passwordSalt: Value(hashed.saltB64),
-          iterations: Value(hashed.iterations),
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: authEmail,
+        password: password,
+      );
+      final user = credential.user;
+      if (user == null) {
+        return const Left(
+          AuthFailure(
+            code: AuthFailureCode.unknown,
+            message: 'Could not create account',
+          ),
+        );
+      }
+
+      // Persist profile data + the username->uid lookup so future
+      // logins can resolve a username to its Firebase uid.
+      await _firestore.collection('users').doc(user.uid).set({
+        'username': username.trim(),
+        'displayName': displayName.trim(),
+        'email': email.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      await _firestore.collection('usernames').doc(usernameKey).set({
+        'uid': user.uid,
+      });
+
+      return Right(
+        AuthUser(
+          id: user.uid.hashCode,
+          username: username.trim(),
+          createdAt: DateTime.now(),
         ),
       );
-
-      final prefs = await _getPrefs();
-      await prefs.setInt(_kAuthUserId, id);
-
-      return Right(AuthUser(
-        id: id,
-        username: username,
-        createdAt: DateTime.now(),
-      ));
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          return const Left(
+            AuthFailure(
+              code: AuthFailureCode.usernameTaken,
+              message: 'That username is already taken',
+            ),
+          );
+        case 'weak-password':
+          return Left(
+            ValidationFailure(errors: {'password': 'Password is too weak'}),
+          );
+        case 'invalid-email':
+          return const Left(
+            AuthFailure(
+              code: AuthFailureCode.unknown,
+              message: 'Invalid email format',
+            ),
+          );
+        default:
+          return Left(
+            AuthFailure(
+              code: AuthFailureCode.unknown,
+              message: e.message ?? 'Could not create account',
+            ),
+          );
+      }
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
     }
@@ -88,7 +158,22 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final user = await _dao.findByUsername(username);
+      final uid = await _uidForUsername(username);
+      if (uid == null) {
+        return const Left(
+          AuthFailure(
+            code: AuthFailureCode.invalidCredentials,
+            message: 'Invalid username or password',
+          ),
+        );
+      }
+
+      // We have the uid; sign in with the synthesized email + password.
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: _authEmail(username),
+        password: password,
+      );
+      final user = credential.user;
       if (user == null) {
         return const Left(
           AuthFailure(
@@ -98,31 +183,33 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      final ok = PasswordHasher.verify(
-        password: password,
-        hashed: HashedPassword(
-          hashB64: user.passwordHash,
-          saltB64: user.passwordSalt,
-          iterations: user.iterations,
+      return Right(
+        AuthUser(
+          id: user.uid.hashCode,
+          username: username.trim(),
+          createdAt: DateTime.now(),
         ),
       );
-      if (!ok) {
-        return const Left(
-          AuthFailure(
-            code: AuthFailureCode.invalidCredentials,
-            message: 'Invalid username or password',
-          ),
-        );
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'user-not-found':
+        case 'wrong-password':
+        case 'invalid-credential':
+        case 'invalid-login-credentials':
+          return const Left(
+            AuthFailure(
+              code: AuthFailureCode.invalidCredentials,
+              message: 'Invalid username or password',
+            ),
+          );
+        default:
+          return Left(
+            AuthFailure(
+              code: AuthFailureCode.unknown,
+              message: e.message ?? 'Could not sign in',
+            ),
+          );
       }
-
-      final prefs = await _getPrefs();
-      await prefs.setInt(_kAuthUserId, user.id);
-
-      return Right(AuthUser(
-        id: user.id,
-        username: user.username,
-        createdAt: user.createdAt,
-      ));
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
     }
@@ -131,8 +218,13 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, bool>> hasUser() async {
     try {
-      final count = await _dao.count();
-      return Right(count > 0);
+      // For a Firebase-backed app, "has user" means: is there a signed-in
+      // Firebase user already on this device? Firebase persists the
+      // auth token across launches, so this survives reinstalls only
+      // if the user is also signed in to the device + the Firebase
+      // session hasn't expired — but it works for the common case of
+      // "user opened the app yesterday and is still signed in".
+      return Right(_auth.currentUser != null);
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
     }
@@ -141,8 +233,7 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, Unit>> logout() async {
     try {
-      final prefs = await _getPrefs();
-      await prefs.remove(_kAuthUserId);
+      await _auth.signOut();
       return const Right(Unit.instance);
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
@@ -152,8 +243,11 @@ class AuthRepositoryImpl implements AuthRepository {
   @override
   Future<Either<Failure, int?>> currentUserId() async {
     try {
-      final prefs = await _getPrefs();
-      return Right(prefs.getInt(_kAuthUserId));
+      final user = _auth.currentUser;
+      if (user == null) return const Right(null);
+      // Hash the uid so the rest of the app — which still treats the
+      // id as an int SQLite-style key — keeps working unchanged.
+      return Right(user.uid.hashCode);
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
     }

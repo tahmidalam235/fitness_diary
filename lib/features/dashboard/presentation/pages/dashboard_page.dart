@@ -79,7 +79,7 @@ class _DashboardViewState extends State<_DashboardView> {
       // Total set count across all logs:
       int totalSets = 0;
       for (final log in allLogs) {
-        final entries = await dao.watchEntriesForLog(log.id).first;
+        final entries = await dao.getEntriesForLogById(log.id);
         totalSets += entries.length;
       }
       return _DashboardStats(

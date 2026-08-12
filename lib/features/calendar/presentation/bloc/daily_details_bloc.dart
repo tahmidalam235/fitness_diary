@@ -80,6 +80,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     emit(DailyDetailsLoading(date: day));
 
     _logsSub = _watchLogsForDay(day).listen((result) {
+      if (isClosed) return;
       result.fold(
         (failure) => add(DetailsErrorEvent(failure)),
         (logs) => add(LogsReceivedEvent(logs)),
@@ -87,6 +88,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     });
 
     _entriesSub = _watchEntriesByLogForDay(day).listen((result) {
+      if (isClosed) return;
       result.fold(
         (failure) => add(DetailsErrorEvent(failure)),
         (entries) => add(EntriesReceivedEvent(entries)),
@@ -94,23 +96,23 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     });
   }
 
-  void _onLogsReceived(
+  Future<void> _onLogsReceived(
     LogsReceivedEvent event,
     Emitter<DailyDetailsState> emit,
-  ) {
+  ) async {
     _logs = event.logs;
     _gotLogs = true;
-    _resolveLookups();
+    await _resolveLookups();
     _emitCurrent(emit);
   }
 
-  void _onEntriesReceived(
+  Future<void> _onEntriesReceived(
     EntriesReceivedEvent event,
     Emitter<DailyDetailsState> emit,
-  ) {
+  ) async {
     _entriesByLog = event.entriesByLog;
     _gotEntries = true;
-    _resolveLookups();
+    await _resolveLookups();
     _emitCurrent(emit);
   }
 

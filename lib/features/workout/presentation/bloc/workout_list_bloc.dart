@@ -218,8 +218,14 @@ class WorkoutListBloc extends Bloc<WorkoutListEvent, WorkoutListState> {
     emit(WorkoutListLoading());
     await _subscription?.cancel();
     _subscription = _watchWorkouts(event.sessionId).listen(
-      (result) => add(WorkoutsReceived(result.getOrElse((_) => const []))),
-      onError: (Object error) => add(const WorkoutsReceived(<Workout>[])),
+      (result) {
+        if (isClosed) return;
+        add(WorkoutsReceived(result.getOrElse((_) => const [])));
+      },
+      onError: (Object error) {
+        if (isClosed) return;
+        add(const WorkoutsReceived(<Workout>[]));
+      },
     );
   }
 

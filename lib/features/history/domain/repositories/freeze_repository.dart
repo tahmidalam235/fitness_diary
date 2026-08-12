@@ -17,8 +17,5 @@ abstract class FreezeRepository {
   /// Toggle the freeze state for [day]. When [frozen] is `true` a
   /// freeze row is inserted (idempotent); when `false` any existing
   /// freeze for that day is removed.
-  Future<Either<Failure, Unit>> setFrozen(
-    DateTime day, {
-    required bool frozen,
-  });
+  Future<Either<Failure, Unit>> setFrozen(DateTime day, {required bool frozen});
 }

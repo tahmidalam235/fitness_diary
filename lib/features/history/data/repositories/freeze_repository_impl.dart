@@ -3,20 +3,22 @@ import 'dart:async';
 import '../../../../core/error/error_mapper.dart';
 import '../../../../core/error/exceptions.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/sync/sync_service.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/utils/unit.dart';
 import '../../domain/repositories/freeze_repository.dart';
 import '../datasources/freeze_local_datasource.dart';
 
-/// Concrete [FreezeRepository] backed by the local Drift DAO.
+/// Firestore-backed implementation of [FreezeRepository].
 ///
-/// Maps any thrown [AppException] (or generic Object) into a
-/// [Failure] so the presentation layer can handle it uniformly. Mirrors
-/// the error-mapping style of `HistoryRepositoryImpl`.
+/// The DAO already mirrors freeze writes to Firestore via [SyncService]
+/// (insert/delete methods on `WorkoutLogFreezeDao`), so this repo just
+/// passes through and surfaces failures as [Failure]s.
 class FreezeRepositoryImpl implements FreezeRepository {
-  const FreezeRepositoryImpl({required this.dataSource});
+  const FreezeRepositoryImpl({required this.dataSource, this.sync});
 
   final FreezeLocalDataSource dataSource;
+  final SyncService? sync;
 
   Failure _mapError(Object error, String label) {
     return mapExceptionToFailure(
@@ -46,7 +48,12 @@ class FreezeRepositoryImpl implements FreezeRepository {
       final normalized = DateTime(day.year, day.month, day.day);
       if (frozen) {
         await dataSource.insertFreeze(day: normalized);
+        // The DAO's `insertFreeze` already uploads to Firestore on
+        // success; the sync handle here is a defensive re-emit.
+        unawaited(sync?.uploadFreezeForDay(normalized));
       } else {
+        // The DAO's `deleteFreezeForDay` already deletes the
+        // matching Firestore docs.
         await dataSource.deleteFreezeForDay(normalized);
       }
       return const Right<Failure, Unit>(Unit.instance);
@@ -56,6 +63,18 @@ class FreezeRepositoryImpl implements FreezeRepository {
       return Left(
         UnexpectedFailure(message: 'Failed to update freeze', cause: error),
       );
+    }
+  }
+}
+
+extension on SyncService {
+  /// Defensive re-emit: look up the (already-persisted) freeze row for
+  /// [day] and re-upload it. Idempotent — Firestore's `set` overwrites
+  /// with identical data.
+  Future<void> uploadFreezeForDay(DateTime day) async {
+    final rows = await selectFreezesForDay(day);
+    for (final row in rows) {
+      await uploadFreeze(row);
     }
   }
 }

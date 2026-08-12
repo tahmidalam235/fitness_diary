@@ -13,15 +13,20 @@ abstract class WorkoutLogRepository {
   /// Returns today's log for [sessionId], creating one if none exists.
   Future<Either<Failure, WorkoutLog>> getOrCreateTodayLog(int sessionId);
 
+  /// Returns today's log for [sessionId] if it exists, otherwise
+  /// `null`. Never creates a log row — preferred for read-only
+  /// consumers that shouldn't leave behind empty logs (e.g. opening
+  /// the session details picker).
+  Future<Either<Failure, WorkoutLog?>> findTodayLog(int sessionId);
+
   /// Watches today's entries for [sessionId] as a `Map<workoutId, entry>`.
   /// The v7+ contract guarantees exactly one row per workout per day.
-  Stream<Either<Failure, Map<int, WorkoutLogEntry>>>
-      watchTodayEntriesByWorkout(int sessionId);
+  Stream<Either<Failure, Map<int, WorkoutLogEntry>>> watchTodayEntriesByWorkout(
+    int sessionId,
+  );
 
   /// Upserts a single entry. Returns the persisted entity.
-  Future<Either<Failure, WorkoutLogEntry>> upsertEntry(
-    WorkoutLogEntry entry,
-  );
+  Future<Either<Failure, WorkoutLogEntry>> upsertEntry(WorkoutLogEntry entry);
 
   /// Deletes an entry by id.
   Future<Either<Failure, Unit>> deleteEntry(int id);
@@ -38,6 +43,7 @@ abstract class WorkoutLogRepository {
 
   /// Returns the most recent prior entry (strictly before today) per
   /// workout id in [workoutIds]. Used by the prefill flow.
-  Future<Either<Failure, Map<int, WorkoutLogEntry>>>
-      getLastEntriesForWorkouts(List<int> workoutIds);
+  Future<Either<Failure, Map<int, WorkoutLogEntry>>> getLastEntriesForWorkouts(
+    List<int> workoutIds,
+  );
 }

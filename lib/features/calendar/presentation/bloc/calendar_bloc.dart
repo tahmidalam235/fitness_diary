@@ -19,8 +19,8 @@ import 'calendar_state.dart';
 /// query and the resulting set is small enough to hold in memory.
 class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
   CalendarBloc({required WatchLogsInRange watchLogsInRange})
-      : _watchLogsInRange = watchLogsInRange,
-        super(const CalendarLoading()) {
+    : _watchLogsInRange = watchLogsInRange,
+      super(const CalendarLoading()) {
     on<LogsReceivedEvent>(_onLogsReceived);
     on<CalendarErrorEvent>(_onCalendarError);
 
@@ -32,46 +32,40 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
     final start = DateTime(now.year - 10, 1, 1);
     final end = DateTime(now.year + 11, 1, 1);
 
-    _sub = _watchLogsInRange(DateRange(start: start, end: end)).listen(
-      (result) {
-        result.fold(
-          (failure) => add(CalendarErrorEvent(failure)),
-          (logs) {
-            final days = <DateTime>{};
-            final counts = <DateTime, int>{};
-            for (final l in logs) {
-              final d = DateTime(
-                l.performedAt.year,
-                l.performedAt.month,
-                l.performedAt.day,
-              );
-              days.add(d);
-              counts[d] = (counts[d] ?? 0) + 1;
-            }
-            add(LogsReceivedEvent(days, counts));
-          },
-        );
-      },
-    );
+    _sub = _watchLogsInRange(DateRange(start: start, end: end)).listen((
+      result,
+    ) {
+      if (isClosed) return;
+      result.fold((failure) => add(CalendarErrorEvent(failure)), (logs) {
+        final days = <DateTime>{};
+        final counts = <DateTime, int>{};
+        for (final l in logs) {
+          final d = DateTime(
+            l.performedAt.year,
+            l.performedAt.month,
+            l.performedAt.day,
+          );
+          days.add(d);
+          counts[d] = (counts[d] ?? 0) + 1;
+        }
+        add(LogsReceivedEvent(days, counts));
+      });
+    });
   }
 
   final WatchLogsInRange _watchLogsInRange;
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _sub;
 
-  void _onLogsReceived(
-    LogsReceivedEvent event,
-    Emitter<CalendarState> emit,
-  ) {
-    emit(CalendarLoaded(
-      daysWithLogs: event.daysWithLogs,
-      workoutsByDay: event.workoutsByDay,
-    ));
+  void _onLogsReceived(LogsReceivedEvent event, Emitter<CalendarState> emit) {
+    emit(
+      CalendarLoaded(
+        daysWithLogs: event.daysWithLogs,
+        workoutsByDay: event.workoutsByDay,
+      ),
+    );
   }
 
-  void _onCalendarError(
-    CalendarErrorEvent event,
-    Emitter<CalendarState> emit,
-  ) {
+  void _onCalendarError(CalendarErrorEvent event, Emitter<CalendarState> emit) {
     emit(CalendarError(event.failure));
   }
 

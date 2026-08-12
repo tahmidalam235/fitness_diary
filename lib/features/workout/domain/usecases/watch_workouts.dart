@@ -4,8 +4,7 @@ import '../../../../core/utils/either.dart';
 import '../entities/workout.dart';
 import '../repositories/workout_repository.dart';
 
-class WatchWorkoutsForSession
-    extends StreamUseCase<List<Workout>, int> {
+class WatchWorkoutsForSession extends StreamUseCase<List<Workout>, int> {
   const WatchWorkoutsForSession({required this.repository});
 
   final WorkoutRepository repository;

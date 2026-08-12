@@ -53,22 +53,20 @@ class _SessionFormView extends StatelessWidget {
 
   bool get _isEditing => sessionId != null;
 
-  Future<void> _onSubmit(
-    BuildContext context,
-    SessionFormResult result,
-  ) async {
+  Future<void> _onSubmit(BuildContext context, SessionFormResult result) async {
     final bloc = context.read<SessionBloc>();
     if (_isEditing) {
-      bloc.add(UpdateSessionEvent(
-        id: sessionId!,
-        name: result.name,
-        description: result.description,
-      ));
+      bloc.add(
+        UpdateSessionEvent(
+          id: sessionId!,
+          name: result.name,
+          description: result.description,
+        ),
+      );
     } else {
-      bloc.add(CreateSessionEvent(
-        name: result.name,
-        description: result.description,
-      ));
+      bloc.add(
+        CreateSessionEvent(name: result.name, description: result.description),
+      );
     }
     // Pop immediately — the bloc + Drift stream keeps the list in sync.
     if (context.mounted) {
@@ -79,20 +77,22 @@ class _SessionFormView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final title =
-        _isEditing ? l10n.sessionFormTitleEdit : l10n.sessionFormTitleNew;
+    final title = _isEditing
+        ? l10n.sessionFormTitleEdit
+        : l10n.sessionFormTitleNew;
 
     return AppScaffold(
       title: title,
       body: Padding(
         padding: const EdgeInsets.all(AppSpacing.lg),
         child: BlocConsumer<SessionBloc, SessionState>(
-          listenWhen: (prev, curr) => prev is! SessionError && curr is SessionError,
+          listenWhen: (prev, curr) =>
+              prev is! SessionError && curr is SessionError,
           listener: (context, state) {
             if (state is SessionError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.failure.message)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.failure.message)));
             }
           },
           builder: (context, state) {

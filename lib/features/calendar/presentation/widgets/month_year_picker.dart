@@ -42,11 +42,8 @@ class MonthYearPicker extends StatefulWidget {
   }) {
     return showDialog<DateTime>(
       context: context,
-      builder: (_) => MonthYearPicker(
-        initial: initial,
-        minYear: minYear,
-        maxYear: maxYear,
-      ),
+      builder: (_) =>
+          MonthYearPicker(initial: initial, minYear: minYear, maxYear: maxYear),
     );
   }
 
@@ -137,8 +134,9 @@ class _MonthYearPickerState extends State<MonthYearPicker> {
                 children: [
                   for (var m = 1; m <= 12; m++)
                     _MonthChip(
-                      label: DateFormat.MMM(locale)
-                          .format(DateTime(_year, m, 1)),
+                      label: DateFormat.MMM(
+                        locale,
+                      ).format(DateTime(_year, m, 1)),
                       selected: m == _month && _year == widget.initial.year,
                       onTap: () => _pickMonth(m),
                     ),

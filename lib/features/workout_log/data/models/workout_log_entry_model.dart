@@ -1,8 +1,13 @@
-import 'package:drift/drift.dart';
-
-import '../../../../core/database/app_database.dart' as db;
 import '../../domain/entities/workout_log_entry.dart';
 
+/// JSON adapter for [WorkoutLogEntry].
+///
+/// Source of truth lives in Firestore: every [WorkoutLogEntryModel]
+/// carries both `firestoreId` / `workoutLogFirestoreId` /
+/// `workoutFirestoreId` (Firestore document ids) and `id` /
+/// `workoutLogId` / `workoutId` (ints derived from the corresponding
+/// firestoreId hashes for backwards-compat with the int-keyed domain
+/// layer).
 class WorkoutLogEntryModel {
   const WorkoutLogEntryModel({
     required this.id,
@@ -16,21 +21,38 @@ class WorkoutLogEntryModel {
     this.durationSeconds,
     this.restSeconds,
     this.notes = '',
+    this.firestoreId,
+    this.workoutLogFirestoreId,
+    this.workoutFirestoreId,
+    this.createdAt,
+    this.updatedAt,
   });
 
-  factory WorkoutLogEntryModel.fromDrift(db.WorkoutLogEntry row) {
+  /// Builds a [WorkoutLogEntryModel] from a Firestore document. Local
+  /// int ids are derived from the corresponding firestoreId hashes.
+  factory WorkoutLogEntryModel.fromJson(Map<String, dynamic> json) {
+    final fid = json['firestoreId'] as String;
+    final logFid = json['workoutLogFirestoreId'] as String?;
+    final workoutFid = json['workoutFirestoreId'] as String?;
     return WorkoutLogEntryModel(
-      id: row.id,
-      workoutLogId: row.workoutLogId,
-      workoutId: row.workoutId,
-      setIndex: row.setIndex,
-      position: row.position,
-      sets: row.sets,
-      reps: row.reps,
-      weight: row.weight,
-      durationSeconds: row.durationSeconds,
-      restSeconds: row.restSeconds,
-      notes: row.notes,
+      id: fid.hashCode,
+      workoutLogId: logFid?.hashCode ?? 0,
+      workoutId: workoutFid?.hashCode ?? 0,
+      setIndex: json['setIndex'] as int,
+      position: json['position'] as int,
+      sets: json['sets'] as int?,
+      reps: json['reps'] as int?,
+      weight: (json['weight'] as num?)?.toDouble(),
+      durationSeconds: json['durationSeconds'] as int?,
+      restSeconds: json['restSeconds'] as int?,
+      notes: (json['notes'] as String?) ?? '',
+      firestoreId: fid,
+      workoutLogFirestoreId: logFid,
+      workoutFirestoreId: workoutFid,
+      createdAt: DateTime.fromMillisecondsSinceEpoch(json['createdAt'] as int),
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.fromMillisecondsSinceEpoch(json['updatedAt'] as int)
+          : null,
     );
   }
 
@@ -45,6 +67,11 @@ class WorkoutLogEntryModel {
   final int? durationSeconds;
   final int? restSeconds;
   final String notes;
+  final String? firestoreId;
+  final String? workoutLogFirestoreId;
+  final String? workoutFirestoreId;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   WorkoutLogEntryModel copyWith({
     int? id,
@@ -58,6 +85,11 @@ class WorkoutLogEntryModel {
     int? durationSeconds,
     int? restSeconds,
     String? notes,
+    String? firestoreId,
+    String? workoutLogFirestoreId,
+    String? workoutFirestoreId,
+    DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return WorkoutLogEntryModel(
       id: id ?? this.id,
@@ -71,50 +103,45 @@ class WorkoutLogEntryModel {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       restSeconds: restSeconds ?? this.restSeconds,
       notes: notes ?? this.notes,
+      firestoreId: firestoreId ?? this.firestoreId,
+      workoutLogFirestoreId:
+          workoutLogFirestoreId ?? this.workoutLogFirestoreId,
+      workoutFirestoreId: workoutFirestoreId ?? this.workoutFirestoreId,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
   WorkoutLogEntry toEntity() => WorkoutLogEntry(
-        id: id,
-        workoutLogId: workoutLogId,
-        workoutId: workoutId,
-        setIndex: setIndex,
-        position: position,
-        sets: sets,
-        reps: reps,
-        weight: weight,
-        durationSeconds: durationSeconds,
-        restSeconds: restSeconds,
-        notes: notes,
-      );
+    id: id,
+    workoutLogId: workoutLogId,
+    workoutId: workoutId,
+    setIndex: setIndex,
+    position: position,
+    sets: sets,
+    reps: reps,
+    weight: weight,
+    durationSeconds: durationSeconds,
+    restSeconds: restSeconds,
+    notes: notes,
+    firestoreId: firestoreId,
+    workoutLogFirestoreId: workoutLogFirestoreId,
+    workoutFirestoreId: workoutFirestoreId,
+  );
 
-  db.WorkoutLogEntry toDrift() => db.WorkoutLogEntry(
-        id: id,
-        workoutLogId: workoutLogId,
-        workoutId: workoutId,
-        setIndex: setIndex,
-        position: position,
-        sets: sets,
-        reps: reps,
-        weight: weight,
-        durationSeconds: durationSeconds,
-        restSeconds: restSeconds,
-        notes: notes,
-        createdAt: DateTime.now(),
-      );
-
-  db.WorkoutLogEntriesCompanion toInsertCompanion() {
-    return db.WorkoutLogEntriesCompanion.insert(
-      workoutLogId: workoutLogId,
-      workoutId: workoutId,
-      setIndex: setIndex,
-      position: position,
-      sets: Value(sets),
-      reps: Value(reps),
-      weight: Value(weight),
-      durationSeconds: Value(durationSeconds),
-      restSeconds: Value(restSeconds),
-      notes: Value(notes),
-    );
-  }
+  Map<String, dynamic> toJson() => {
+    'firestoreId': firestoreId,
+    'workoutLogFirestoreId': workoutLogFirestoreId,
+    'workoutFirestoreId': workoutFirestoreId,
+    'setIndex': setIndex,
+    'position': position,
+    'sets': sets,
+    'reps': reps,
+    'weight': weight,
+    'durationSeconds': durationSeconds,
+    'restSeconds': restSeconds,
+    'notes': notes,
+    'createdAt': (createdAt ?? DateTime.now()).millisecondsSinceEpoch,
+    'updatedAt': updatedAt?.millisecondsSinceEpoch,
+  };
 }

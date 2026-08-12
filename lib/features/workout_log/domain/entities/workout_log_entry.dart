@@ -20,6 +20,9 @@ class WorkoutLogEntry extends Equatable {
     this.durationSeconds,
     this.restSeconds,
     this.notes = '',
+    this.firestoreId,
+    this.workoutLogFirestoreId,
+    this.workoutFirestoreId,
   });
 
   /// Primary key. `0` indicates a not-yet-persisted row.
@@ -46,6 +49,19 @@ class WorkoutLogEntry extends Equatable {
   final int? restSeconds;
   final String notes;
 
+  /// Stable Firestore ID of this entry.
+  final String? firestoreId;
+
+  /// Firestore ID of the parent workout log.
+  final String? workoutLogFirestoreId;
+
+  /// Optional Firestore id of the master workout this entry belongs
+  /// to. Populated when the entry was created from the session
+  /// details picker; lets the today page join entries back to their
+  /// workout template even when the int `workoutId` hashes don't
+  /// agree across snapshots.
+  final String? workoutFirestoreId;
+
   WorkoutLogEntry copyWith({
     int? id,
     int? workoutLogId,
@@ -58,6 +74,9 @@ class WorkoutLogEntry extends Equatable {
     int? durationSeconds,
     int? restSeconds,
     String? notes,
+    String? firestoreId,
+    String? workoutLogFirestoreId,
+    String? workoutFirestoreId,
   }) {
     return WorkoutLogEntry(
       id: id ?? this.id,
@@ -71,21 +90,28 @@ class WorkoutLogEntry extends Equatable {
       durationSeconds: durationSeconds ?? this.durationSeconds,
       restSeconds: restSeconds ?? this.restSeconds,
       notes: notes ?? this.notes,
+      firestoreId: firestoreId ?? this.firestoreId,
+      workoutLogFirestoreId:
+          workoutLogFirestoreId ?? this.workoutLogFirestoreId,
+      workoutFirestoreId: workoutFirestoreId ?? this.workoutFirestoreId,
     );
   }
 
   @override
   List<Object?> get props => [
-        id,
-        workoutLogId,
-        workoutId,
-        setIndex,
-        position,
-        sets,
-        reps,
-        weight,
-        durationSeconds,
-        restSeconds,
-        notes,
-      ];
+    id,
+    workoutLogId,
+    workoutId,
+    setIndex,
+    position,
+    sets,
+    reps,
+    weight,
+    durationSeconds,
+    restSeconds,
+    notes,
+    firestoreId,
+    workoutLogFirestoreId,
+    workoutFirestoreId,
+  ];
 }

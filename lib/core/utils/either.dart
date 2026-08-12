@@ -80,8 +80,7 @@ final class Right<L, R> extends Either<L, R> {
 
   @override
   bool operator ==(Object other) =>
-      identical(this, other) ||
-      (other is Right<L, R> && other.value == value);
+      identical(this, other) || (other is Right<L, R> && other.value == value);
 
   @override
   int get hashCode => value.hashCode;

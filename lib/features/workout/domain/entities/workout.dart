@@ -16,6 +16,7 @@ class Workout extends Equatable {
     this.notes = '',
     required this.sessionId,
     required this.workoutId,
+    this.masterFirestoreId,
   });
 
   /// Primary key of the [SessionWorkouts] row.
@@ -48,6 +49,14 @@ class Workout extends Equatable {
   /// Optional notes attached to this exercise in the session.
   final String notes;
 
+  /// Firestore document id of the master [Workouts] row this session
+  /// workout was joined from. Used to stamp `WorkoutLogEntry`
+  /// `workoutFirestoreId` so the entries stream can recover the entry
+  /// after a round-trip — without it the seed row is dropped by the
+  /// data source filter and the today page never shows the picked
+  /// workout.
+  final String? masterFirestoreId;
+
   Workout copyWith({
     int? id,
     int? sessionId,
@@ -59,6 +68,7 @@ class Workout extends Equatable {
     int? defaultDurationSeconds,
     double? defaultWeight,
     String? notes,
+    String? masterFirestoreId,
   }) {
     return Workout(
       id: id ?? this.id,
@@ -72,6 +82,7 @@ class Workout extends Equatable {
           defaultDurationSeconds ?? this.defaultDurationSeconds,
       defaultWeight: defaultWeight ?? this.defaultWeight,
       notes: notes ?? this.notes,
+      masterFirestoreId: masterFirestoreId ?? this.masterFirestoreId,
     );
   }
 
@@ -87,5 +98,6 @@ class Workout extends Equatable {
     defaultDurationSeconds,
     defaultWeight,
     notes,
+    masterFirestoreId,
   ];
 }

@@ -42,6 +42,7 @@ class AppScaffold extends StatelessWidget {
     this.useNavigationRail = false,
     this.showBackButton = false,
     this.titleLeadingIcon = false,
+    this.leading,
     super.key,
   });
 
@@ -50,6 +51,9 @@ class AppScaffold extends StatelessWidget {
   final List<Widget>? actions;
   final Widget? floatingActionButton;
   final Widget? bottomNavigationBar;
+
+  /// Optional leading widget to override the default back button.
+  final Widget? leading;
 
   /// When true, the AppBar's title is prefixed with a small branded app
   /// icon to reinforce product identity on top-level destinations.
@@ -138,9 +142,14 @@ class AppScaffold extends StatelessWidget {
     );
   }
 
+  Widget? _getEffectiveLeading(BuildContext context) {
+    if (leading != null) return leading;
+    return _buildLeading(context);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final leading = _buildLeading(context);
+    final effectiveLeading = _getEffectiveLeading(context);
     final finalActions = _buildActions(context);
 
     if (!useNavigationRail) {
@@ -148,8 +157,8 @@ class AppScaffold extends StatelessWidget {
         appBar: AppBar(
           title: _buildTitle(context),
           actions: finalActions,
-          leading: leading,
-          automaticallyImplyLeading: leading == null,
+          leading: effectiveLeading,
+          automaticallyImplyLeading: effectiveLeading == null,
         ),
         body: body,
         floatingActionButton: floatingActionButton,
@@ -166,8 +175,8 @@ class AppScaffold extends StatelessWidget {
             appBar: AppBar(
               title: _buildTitle(context),
               actions: finalActions,
-              leading: leading,
-              automaticallyImplyLeading: leading == null,
+              leading: effectiveLeading,
+              automaticallyImplyLeading: effectiveLeading == null,
             ),
             body: Row(
               children: [
@@ -190,8 +199,8 @@ class AppScaffold extends StatelessWidget {
           appBar: AppBar(
             title: _buildTitle(context),
             actions: finalActions,
-            leading: leading,
-            automaticallyImplyLeading: leading == null,
+            leading: effectiveLeading,
+            automaticallyImplyLeading: effectiveLeading == null,
           ),
           body: Padding(
             padding: const EdgeInsets.all(AppSpacing.xs),

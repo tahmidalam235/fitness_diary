@@ -1,0 +1,48 @@
+rules_version = '2';
+
+// Firestore security rules for the Fitness Diary cloud backup.
+//
+// Deploy via the Firebase console or with the Firebase CLI:
+//   firebase deploy --only firestore:rules
+//
+// Design goals:
+//   - Each user may only read or write their own data subtree under
+//     `users/{their_uid}`.
+//   - The `usernames/{username}` collection is a public username → uid
+//     lookup index used by AuthRepositoryImpl.login() before the user
+//     is authenticated. Therefore reads MUST be open (otherwise nobody
+//     can ever log in). Writes are restricted: only an authenticated
+//     user may create a row whose `uid` field matches their own uid,
+//     and rows are immutable afterwards so the index can't be tampered
+//     with (no update/delete).
+//   - Everything else is denied by default.
+//
+// No Firebase Storage rules — this app does not use Cloud Storage.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Per-user data subtree. Authenticated user must own the subtree.
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null
+                        && request.auth.uid == uid;
+    }
+
+    // Username lookup index. Publicly readable so a user can log in.
+    // Only the row's owner may create it, and only if the row's `uid`
+    // field equals their own uid (so a user can't squat someone else's
+    // username). Updates/deletes are forbidden to keep the index
+    // tamper-proof; users who want to change their username have to
+    // delete + recreate.
+    match /usernames/{username} {
+      allow read: if true;
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+      allow update, delete: if false;
+    }
+
+    // Default deny everything else.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

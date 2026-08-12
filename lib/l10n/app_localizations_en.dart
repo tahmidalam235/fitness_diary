@@ -417,7 +417,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutFieldDefaultReps => 'Default reps';
 
   @override
-  String get workoutFieldDefaultDuration => 'Default duration (seconds)';
+  String get workoutFieldDefaultDuration => 'Default duration (minutes)';
 
   @override
   String get workoutFieldDefaultWeight => 'Default weight';
@@ -465,8 +465,8 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String workoutListDuration(int seconds) {
-    return '${seconds}s';
+  String workoutListDuration(int minutes) {
+    return '$minutes min';
   }
 
   @override

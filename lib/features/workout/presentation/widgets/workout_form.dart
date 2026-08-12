@@ -61,8 +61,13 @@ class _WorkoutFormState extends State<WorkoutForm> {
     _repsController = TextEditingController(
       text: (initial?.defaultReps ?? 10).toString(),
     );
+    // Duration is entered in minutes in the UI but stored as
+    // `defaultDurationSeconds` on the entity (DB / bloc / repo are
+    // untouched). Convert seconds → minutes for the initial value.
     _durationController = TextEditingController(
-      text: initial?.defaultDurationSeconds?.toString() ?? '',
+      text: initial == null || initial.defaultDurationSeconds == null
+          ? ''
+          : (initial.defaultDurationSeconds! ~/ 60).toString(),
     );
     _weightController = TextEditingController(
       text: initial?.defaultWeight?.toString() ?? '',
@@ -87,9 +92,15 @@ class _WorkoutFormState extends State<WorkoutForm> {
     }
     setState(() => _submitting = true);
     try {
-      final duration = _durationController.text.trim().isEmpty
+      // Duration is entered in minutes in the UI; convert to seconds for
+      // the entity (whose `defaultDurationSeconds` field is the source
+      // of truth everywhere else in the app).
+      final durationMinutesRaw = _durationController.text.trim();
+      final duration = durationMinutesRaw.isEmpty
           ? null
-          : int.tryParse(_durationController.text.trim());
+          : (int.tryParse(durationMinutesRaw) == null
+                ? null
+                : int.parse(durationMinutesRaw) * 60);
       final weight = _weightController.text.trim().isEmpty
           ? null
           : double.tryParse(_weightController.text.trim());
@@ -259,7 +270,9 @@ class _WorkoutFormState extends State<WorkoutForm> {
                   textInputAction: TextInputAction.next,
                   validator: (v) => _validateOptionalPositiveInt(
                     v,
-                    max: 24 * 60 * 60,
+                    // 24 hours in minutes — the field is entered in
+                    // minutes and converted to seconds before save.
+                    max: 24 * 60,
                     l10n: l10n,
                   ),
                 ),

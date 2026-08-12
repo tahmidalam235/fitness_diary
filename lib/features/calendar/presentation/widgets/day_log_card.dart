@@ -84,8 +84,7 @@ class DayLogCard extends StatelessWidget {
               DaySetSummaryTile(
                 entry: entry.value.first,
                 workoutName:
-                    workoutsById[entry.key]?.exerciseName ??
-                    l10n.dailyDetailsWorkoutFallback(entry.key),
+                    workoutsById[entry.key]?.exerciseName ?? '',
               ),
             if (sections.isEmpty)
               Padding(

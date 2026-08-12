@@ -29,13 +29,10 @@ class DashboardQuickActionsDrawer extends StatelessWidget {
         return const DashboardQuickActionsDrawer();
       },
       transitionBuilder: (_, animation, _, child) {
-        final slide = Tween<Offset>(
-          begin: const Offset(-1, 0),
-          end: Offset.zero,
-        ).animate(CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        ));
+        final slide =
+            Tween<Offset>(begin: const Offset(-1, 0), end: Offset.zero).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            );
         return SlideTransition(position: slide, child: child);
       },
     );

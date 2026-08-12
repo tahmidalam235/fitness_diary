@@ -15,9 +15,7 @@ class GetLastEntriesForWorkouts
   final WorkoutLogRepository repository;
 
   @override
-  Future<Either<Failure, Map<int, WorkoutLogEntry>>> call(
-    List<int> params,
-  ) {
+  Future<Either<Failure, Map<int, WorkoutLogEntry>>> call(List<int> params) {
     return repository.getLastEntriesForWorkouts(params);
   }
 }

@@ -16,6 +16,7 @@ import '../../../../core/utils/either.dart';
 import '../../../../features/history/domain/usecases/watch_frozen_days.dart';
 import '../../../../features/history/domain/usecases/watch_logs_for_day.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../session/domain/entities/session.dart';
@@ -25,7 +26,7 @@ import '../../../session/presentation/bloc/session_state.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
-import 'package:fitness_diary/features/today/presentation/bloc/today_workouts_bloc.dart';
+import '../bloc/today_workouts_bloc.dart';
 
 /// The Today page displays every workout session assigned for today.
 /// Each session shows its configured workout details.
@@ -61,6 +62,9 @@ class _TodayPageState extends State<TodayPage> {
   }
 
   void _subscribeToLogs() {
+    // Drop any prior subscription so a back-to-back re-subscribe
+    // (e.g. after a fresh restore) doesn't double-fire.
+    _logsSub?.cancel();
     _logsSub = getIt<WatchLogsForDay>()(DateTime.now()).listen((result) {
       if (!mounted) return;
       result.fold((_) {}, (logs) {
@@ -72,6 +76,7 @@ class _TodayPageState extends State<TodayPage> {
   }
 
   void _watchFrozen() {
+    _frozenSub?.cancel();
     _frozenSub = getIt<WatchFrozenDays>()(const NoParams()).listen((result) {
       if (!mounted) return;
       result.fold((_) {}, (frozen) {
@@ -104,18 +109,31 @@ class _TodayPageState extends State<TodayPage> {
     final dayName = DateFormat('EEEE').format(DateTime.now());
 
     return BlocProvider<SessionBloc>(
-      create: (_) => getIt<SessionBloc>()..add(const WatchSessionsEvent()),
+      create: (_) {
+        final bloc = getIt<SessionBloc>()..add(const WatchSessionsEvent());
+        return bloc;
+      },
       child: BlocBuilder<SessionBloc, SessionState>(
         builder: (context, state) {
           if (_isPickingSession && state is SessionLoaded) {
-            return AppScaffold(
-              title: 'Add Session',
-              showBackButton: true,
-              body: _SessionPicker(
-                sessions: state.sessions,
-                pickedId: null,
-                onPick: _onAddMoreSession,
-                onClear: () => setState(() => _isPickingSession = false),
+            return PopScope(
+              canPop: false,
+              onPopInvokedWithResult: (didPop, _) {
+                if (didPop) return;
+                setState(() => _isPickingSession = false);
+              },
+              child: AppScaffold(
+                title: 'Add Session',
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => setState(() => _isPickingSession = false),
+                ),
+                body: _SessionPicker(
+                  sessions: state.sessions,
+                  pickedId: null,
+                  onPick: _onAddMoreSession,
+                  onClear: () => setState(() => _isPickingSession = false),
+                ),
               ),
             );
           }
@@ -153,25 +171,84 @@ class _TodayPageState extends State<TodayPage> {
                       if (_todayLogs.isEmpty)
                         Padding(
                           padding: const EdgeInsets.all(AppSpacing.xl),
-                          child: Text(
-                            'No sessions assigned for today.',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                            ),
+                          child: AppEmptyState(
+                            title: l10n.todayEmptyTitle,
+                            message: l10n.todayEmptyMessage,
+                            icon: Icons.play_circle_outline_rounded,
+                            actionLabel: l10n.todayEmptyAction,
+                            onAction: () =>
+                                setState(() => _isPickingSession = true),
                           ),
                         )
                       else
-                        for (final log in _todayLogs)
-                          // Fix 2 & 3: Use log.id as key to preserve Bloc state and
-                          // filter out sessions that no longer exist.
-                          _SessionSection(
-                            key: ValueKey(log.id),
-                            log: log,
-                            allSessions: state is SessionLoaded
+                        // Filter out logs whose underlying session no
+                        // longer exists — these used to render as a
+                        // placeholder "Workout" header each, which was
+                        // confusing once a session was renamed or
+                        // deleted. We only keep logs we can join back
+                        // to a current session.
+                        Builder(
+                          builder: (context) {
+                            // Only filter once the SessionBloc has
+                            // actually loaded — otherwise we'd hide
+                            // every section during the initial render.
+                            final sessionsLoaded = state is SessionLoaded;
+                            final sessions = sessionsLoaded
                                 ? state.sessions
-                                : const [],
-                          ),
+                                : const <Session>[];
+                            final logsForSessions = sessionsLoaded
+                                ? _todayLogs
+                                      .where(
+                                        (log) => sessions.any(
+                                          (s) => s.id == log.sessionId,
+                                        ),
+                                      )
+                                      .toList(growable: false)
+                                : _todayLogs;
+                            if (logsForSessions.isEmpty) {
+                              // No joinable logs yet — surface the empty
+                              // state CTA rather than blank sections.
+                              return Padding(
+                                padding: const EdgeInsets.all(AppSpacing.xl),
+                                child: AppEmptyState(
+                                  title: l10n.todayEmptyTitle,
+                                  message: l10n.todayEmptyMessage,
+                                  icon: Icons.play_circle_outline_rounded,
+                                  actionLabel: l10n.todayEmptyAction,
+                                  onAction: () => setState(
+                                    () => _isPickingSession = true,
+                                  ),
+                                ),
+                              );
+                            }
+                            // Fix 5: each session gets its OWN
+                            // BlocProvider<TodayWorkoutsBloc> nested
+                            // INSIDE its _SessionSection. The previous
+                            // shape wrapped every section in a single
+                            // MultiBlocProvider above the Column, which
+                            // nests the providers in declaration order
+                            // (P1 → P2 → P3 → Column). A
+                            // BlocBuilder<TodayWorkoutsBloc> lookup in
+                            // any section then walked up and found the
+                            // INNERMOST provider (the last log's bloc),
+                            // so every section rendered with that one
+                            // bloc's data — workouts from one session
+                            // visibly appearing under another's section
+                            // header. Moving the provider inside the
+                            // section makes the lookup unambiguous.
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                for (final log in logsForSessions)
+                                  _SessionSection(
+                                    key: ValueKey(log.id),
+                                    log: log,
+                                    allSessions: sessions,
+                                  ),
+                              ],
+                            );
+                          },
+                        ),
                       const Gap(AppSpacing.xl),
                       Padding(
                         padding: const EdgeInsets.symmetric(
@@ -182,8 +259,8 @@ class _TodayPageState extends State<TodayPage> {
                               setState(() => _isPickingSession = true),
                           icon: const Icon(Icons.add_rounded),
                           label: Text(
-                            _todayLogs.isEmpty
-                                ? 'Add Workout for Today'
+                            (state is SessionLoaded && state.sessions.isEmpty)
+                                ? 'Add Session for Today'
                                 : 'Add More Session for Today',
                           ),
                           style: OutlinedButton.styleFrom(
@@ -219,27 +296,30 @@ class _SessionSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     final session = allSessions.where((s) => s.id == log.sessionId).firstOrNull;
 
-    // Fix 2: If the session template was deleted, don't show the orphaned log.
-    if (session == null) return const SizedBox.shrink();
+    // Fallback title when the session template hasn't loaded yet (e.g.
+    // right after a fresh login while the SessionBloc is still warming
+    // up). Showing a placeholder keeps the section visible so the
+    // workout cards underneath are never silently hidden by an empty
+    // SizedBox; the real name replaces this on the next frame.
+    final title = session?.name ?? 'Today';
 
+    // Fix 5: each session's TodayWorkoutsBloc is provided HERE (inside
+    // _SessionSection), not in a MultiBlocProvider above the section
+    // list. Putting them all in one MultiBlocProvider nested the
+    // providers in declaration order, so BlocBuilder lookup found the
+    // innermost (last) provider for every section — every section then
+    // rendered with that one bloc's data, mixing entries across
+    // sessions. A per-section BlocProvider makes the lookup
+    // unambiguous.
     return BlocProvider<TodayWorkoutsBloc>(
-      create: (_) =>
-          getIt<TodayWorkoutsBloc>()
-            ..add(WatchTodayWorkoutsEvent(log.sessionId)),
+      key: ValueKey('tw-${log.id}'),
+      create: (_) => getIt<TodayWorkoutsBloc>()
+        ..add(WatchTodayWorkoutsEvent(log.sessionId)),
       child: BlocBuilder<TodayWorkoutsBloc, TodayWorkoutsState>(
         builder: (context, state) {
-          // Fix 1: If there are no entries for this session today, hide it.
-          // This happens when the user deletes the last workout record.
-          if (state is TodayWorkoutsLoaded && state.entries.isEmpty) {
-            return const SizedBox.shrink();
-          }
-
-          if (state is TodayWorkoutsLoading || state is TodayWorkoutsInitial) {
-            return const AppLoadingIndicator();
-          }
-
           if (state is TodayWorkoutsLoaded) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -252,10 +332,12 @@ class _SessionSection extends StatelessWidget {
                     AppSpacing.sm,
                   ),
                   child: Text(
-                    session.name,
+                    title,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
-                      color: theme.colorScheme.primary,
+                      color: session == null
+                          ? theme.colorScheme.outline
+                          : theme.colorScheme.primary,
                     ),
                   ),
                 ),
@@ -268,6 +350,15 @@ class _SessionSection extends StatelessWidget {
               ],
             );
           }
+
+          if (state is TodayWorkoutsLoading ||
+              state is TodayWorkoutsInitial) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: AppLoadingIndicator(),
+            );
+          }
+
           return const SizedBox.shrink();
         },
       ),
@@ -290,31 +381,40 @@ class _TodayWorkoutsList extends StatelessWidget {
   Widget build(BuildContext context) {
     final entryMap = {for (final e in entries) e.workoutId: e};
 
-    // Fix 1: Filter to only show workouts that actually have a record for today.
+    // Fix 1: Filter to only show workouts that have a record for
+    // today AND still exist in the session's workout list. Orphan
+    // entries (workout deleted from the session but the entry
+    // remained) used to slip through here and lead to "Workout not
+    // found" on click. By also requiring `workoutFirestoreId` to
+    // match a current workout, those rows are filtered out as well.
     final workoutsToShow =
         workoutsById.values
             .where((w) => entryMap.containsKey(w.workoutId))
             .toList()
           ..sort((a, b) => a.position.compareTo(b.position));
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    // Use a Column instead of a nested ListView.builder. Nested
+    // ListViews with `shrinkWrap + NeverScrollableScrollPhysics` inside
+    // another scrolling ListView cause layout errors ("RenderBox was
+    // not laid out", "BoxConstraints forces an infinite width") and
+    // scroll stutter. A Column of Padding-wrapped cards is the
+    // correct, stable shape here.
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      itemCount: workoutsToShow.length,
-      itemBuilder: (context, index) {
-        final workout = workoutsToShow[index];
-        final entry = entryMap[workout.workoutId];
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-          child: _TodayWorkoutCard(
-            workout: workout,
-            entry: entry,
-            sessionId: sessionId,
-          ),
-        );
-      },
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final workout in workoutsToShow)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+              child: _TodayWorkoutCard(
+                workout: workout,
+                entry: entryMap[workout.workoutId],
+                sessionId: sessionId,
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
@@ -410,7 +510,7 @@ class _TodayWorkoutCard extends StatelessWidget {
                   if (duration != null)
                     _WorkoutDetailItem(
                       label: 'Duration',
-                      value: '${duration}s',
+                      value: '${(duration / 60).round()}m',
                     ),
                 ],
               ),
@@ -517,7 +617,21 @@ class _SessionPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+
+    if (sessions.isEmpty) {
+      return AppEmptyState(
+        title: l10n.sessionsEmptyTitle,
+        message: l10n.sessionsEmptyMessage,
+        icon: Icons.fitness_center_rounded,
+        actionLabel: l10n.sessionsEmptyAction,
+        onAction: () {
+          onClear(); // This will set _isPickingSession to false in TodayPage
+          context.pushNamed(RouteNames.sessionNew);
+        },
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

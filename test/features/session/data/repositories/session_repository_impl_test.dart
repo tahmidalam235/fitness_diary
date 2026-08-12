@@ -61,6 +61,7 @@ void main() {
   group('SessionRepositoryImpl.deleteSession', () {
     test('returns Right(Unit) on success', () async {
       when(() => dataSource.delete(any())).thenAnswer((_) async {});
+      when(() => dataSource.getAll()).thenAnswer((_) async => const []);
 
       final result = await repository.deleteSession(42);
 
@@ -69,7 +70,33 @@ void main() {
         (_) => fail('expected Right'),
         (unit) => expect(unit, Unit.instance),
       );
-      verify(() => dataSource.delete(42)).called(1);
+      // The Firestore-only repository treats an empty list as
+      // "already gone", so it returns success without calling delete
+      // on the data source.
+      verifyNever(() => dataSource.delete(any()));
+    });
+
+    test('forwards delete when session exists', () async {
+      final now = DateTime.now();
+      when(() => dataSource.getAll()).thenAnswer(
+        (_) async => [
+          SessionModel(
+            id: 42,
+            name: 'Push',
+            description: '',
+            createdAt: now,
+            updatedAt: now,
+            workoutCount: 0,
+            firestoreId: 'abc',
+          ),
+        ],
+      );
+      when(() => dataSource.delete(any())).thenAnswer((_) async {});
+
+      final result = await repository.deleteSession(42);
+
+      expect(result.isRight, isTrue);
+      verify(() => dataSource.delete('abc')).called(1);
     });
   });
 }

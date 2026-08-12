@@ -1,57 +1,63 @@
-import 'package:drift/drift.dart';
+import '../../sync/firestore_id.dart';
+import '../../sync/sync_service.dart';
+import '../../../features/session/data/models/session_model.dart';
 
-import '../app_database.dart';
-import '../tables/sessions_table.dart';
+/// Firestore-backed replacement for the old Drift `SessionDao`.
+///
+/// Method signatures are kept identical to the Drift DAO so the local
+/// data sources can switch to a `SyncService` field without changing
+/// the rest of the call shape. Every read returns parsed
+/// [SessionModel]s; every write goes through [SyncService].
+class SessionDao {
+  SessionDao(this._sync);
 
-part 'session_dao.g.dart';
+  final SyncService _sync;
 
-/// Data-access object for the [Sessions] table.
-@DriftAccessor(tables: [Sessions])
-class SessionDao extends DatabaseAccessor<AppDatabase> with _$SessionDaoMixin {
-  SessionDao(super.db);
-
-  /// Fetches all sessions ordered by most recently updated first.
-  Future<List<Session>> getAllSessions() {
-    return (select(sessions)
-          ..orderBy([
-            (tbl) => OrderingTerm.desc(tbl.updatedAt),
-            (tbl) => OrderingTerm.desc(tbl.createdAt),
-          ]))
-        .get();
+  Future<List<SessionModel>> getAllSessions() async {
+    return _sync.watchSessions().first;
   }
 
-  /// Reactive stream of all sessions, ordered by most recently updated.
-  Stream<List<Session>> watchSessions() {
-    return (select(sessions)
-          ..orderBy([
-            (tbl) => OrderingTerm.desc(tbl.updatedAt),
-            (tbl) => OrderingTerm.desc(tbl.createdAt),
-          ]))
-        .watch();
+  Stream<List<SessionModel>> watchSessions() => _sync.watchSessions();
+
+  Future<SessionModel?> getSessionById(String firestoreId) =>
+      _sync.getSessionById(firestoreId);
+
+  Future<SessionModel?> findSessionByFirestoreId(String fid) =>
+      _sync.findSessionByFirestoreId(fid);
+
+  Future<List<SessionModel>> getSessionsByIds(List<String> fids) =>
+      _sync.getSessionsByIds(fids);
+
+  /// Inserts (uploads) a new session to Firestore. The model must
+  /// already carry a fresh `firestoreId` — this method does not stamp
+  /// one itself, so the caller can decide on the id format.
+  Future<int> insertSession(SessionModel model) async {
+    final fid = model.firestoreId ?? newFirestoreId();
+    await _sync.uploadSession(model.copyWith(firestoreId: fid));
+    return 1;
   }
 
-  Future<Session?> getSessionById(int id) {
-    return (select(sessions)..where((tbl) => tbl.id.equals(id)))
-        .getSingleOrNull();
+  Future<bool> updateSession(SessionModel model) async {
+    await _sync.uploadSession(model);
+    return true;
   }
 
-  /// Fetches multiple sessions by id in one round trip. Empty ids return
-  /// an empty list. Used by history/day-details to resolve session names
-  /// without N queries.
-  Future<List<Session>> getSessionsByIds(List<int> ids) {
-    if (ids.isEmpty) return Future.value(const <Session>[]);
-    return (select(sessions)..where((tbl) => tbl.id.isIn(ids))).get();
+  Future<int> deleteSession(String firestoreId) async {
+    await _sync.deleteSession(firestoreId);
+    return 1;
   }
+}
 
-  Future<int> insertSession(SessionsCompanion session) {
-    return into(sessions).insert(session);
-  }
-
-  Future<bool> updateSession(Session session) {
-    return update(sessions).replace(session);
-  }
-
-  Future<int> deleteSession(int id) {
-    return (delete(sessions)..where((tbl) => tbl.id.equals(id))).go();
+extension on SessionModel {
+  SessionModel copyWith({String? firestoreId}) {
+    return SessionModel(
+      id: id,
+      name: name,
+      description: description,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      workoutCount: workoutCount,
+      firestoreId: firestoreId ?? this.firestoreId,
+    );
   }
 }

@@ -8,11 +8,7 @@ import '../../l10n/app_localizations.dart';
 
 /// Failure-aware error widget with an optional retry action.
 class AppErrorView extends StatelessWidget {
-  const AppErrorView({
-    required this.failure,
-    this.onRetry,
-    super.key,
-  });
+  const AppErrorView({required this.failure, this.onRetry, super.key});
 
   final Failure failure;
   final VoidCallback? onRetry;

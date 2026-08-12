@@ -1,6 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../../../core/sync/sync_service.dart';
 
 /// Weight unit preference used across the app (PRs, log entries,
 /// workout descriptions). Stored as 'kg' or 'lb' in SharedPreferences.
@@ -17,6 +21,13 @@ enum WeightUnit {
 /// the holder is shaped so future toggles (e.g. weekly reports) can
 /// ride along without another singleton.
 class SettingsService extends ChangeNotifier {
+  SettingsService({this.sync});
+
+  /// Optional cloud-sync handle. When present, every successful
+  /// mutation mirrors the new settings to Firestore on a best-effort
+  /// basis.
+  final SyncService? sync;
+
   static const _kUnit = 'weight_unit';
   static const _kNotifications = 'pref_notifications';
   static const _kWeeklyReports = 'pref_weekly_reports';
@@ -64,6 +75,7 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kUnit, unit.symbol);
+    _uploadCurrent();
   }
 
   Future<void> setNotifications(bool value) async {
@@ -72,6 +84,7 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotifications, value);
+    _uploadCurrent();
   }
 
   Future<void> setReminderTime(TimeOfDay time) async {
@@ -84,6 +97,7 @@ class SettingsService extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kReminderHour, time.hour);
     await prefs.setInt(_kReminderMinute, time.minute);
+    _uploadCurrent();
   }
 
   Future<void> setWeeklyReports(bool value) async {
@@ -92,6 +106,42 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kWeeklyReports, value);
+    _uploadCurrent();
+  }
+
+  /// Fire-and-forget upload of the current settings snapshot.
+  void _uploadCurrent() {
+    final s = sync;
+    if (s == null) return;
+    unawaited(
+      s.uploadSettings(
+        unit: _unit.symbol,
+        notifications: _notifications,
+        weeklyReports: _weeklyReports,
+        reminderHour: _reminderTime.hour,
+        reminderMinute: _reminderTime.minute,
+      ),
+    );
+  }
+
+  /// Wipes the local SharedPreferences keys owned by this service.
+  /// Errors are swallowed — logout must always succeed.
+  Future<void> reset() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_kUnit);
+      await prefs.remove(_kNotifications);
+      await prefs.remove(_kWeeklyReports);
+      await prefs.remove(_kReminderHour);
+      await prefs.remove(_kReminderMinute);
+      _unit = WeightUnit.kg;
+      _notifications = true;
+      _weeklyReports = false;
+      _reminderTime = const TimeOfDay(hour: 19, minute: 0);
+      notifyListeners();
+    } catch (_) {
+      // best-effort
+    }
   }
 
   /// Convert a stored kg weight to the user's preferred display unit.

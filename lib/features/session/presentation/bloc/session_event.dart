@@ -53,10 +53,7 @@ class SessionReceived extends SessionEvent {
 
 /// Creates a new session.
 class CreateSessionEvent extends SessionEvent {
-  const CreateSessionEvent({
-    required this.name,
-    this.description = '',
-  });
+  const CreateSessionEvent({required this.name, this.description = ''});
 
   final String name;
   final String description;

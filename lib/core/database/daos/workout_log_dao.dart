@@ -1,231 +1,243 @@
-import 'package:drift/drift.dart';
+import '../../sync/firestore_id.dart';
+import '../../sync/sync_service.dart';
+import '../../../features/workout_log/data/models/workout_log_entry_model.dart';
+import '../../../features/workout_log/data/models/workout_log_model.dart';
 
-import '../app_database.dart';
-import '../tables/workout_log_entries_table.dart';
-import '../tables/workout_logs_table.dart';
-
-part 'workout_log_dao.g.dart';
-
-/// Data-access object for daily workout logs.
+/// Firestore-backed replacement for the old Drift `WorkoutLogDao`.
 ///
-/// A [WorkoutLog] is a snapshot of a session performed on a given day;
-/// child [WorkoutLogEntries] store per-set data (reps, weight, duration,
-/// rest, notes). Both tables are append-only from the template's point of
-/// view — the source [Sessions] / [SessionWorkouts] rows are never
-/// modified by daily tracking.
-@DriftAccessor(tables: [WorkoutLogs, WorkoutLogEntries])
-class WorkoutLogDao extends DatabaseAccessor<AppDatabase>
-    with _$WorkoutLogDaoMixin {
-  WorkoutLogDao(super.db);
+/// Preserves the **same public method signatures** the widgets and
+/// repositories already depend on, but every method delegates to
+/// [SyncService] which talks directly to Cloud Firestore. There is no
+/// local SQLite mirror.
+///
+/// Returned `WorkoutLogModel` / `WorkoutLogEntryModel` objects carry
+/// both `firestoreId` (the Firestore document id, source of truth) and
+/// `id` (derived from `firestoreId.hashCode` for backwards-compat with
+/// the existing int-keyed domain entities).
+class WorkoutLogDao {
+  WorkoutLogDao(this._sync);
+
+  final SyncService _sync;
 
   // ---------------------------------------------------------------------------
   // Logs
   // ---------------------------------------------------------------------------
 
-  Future<int> insertLog(WorkoutLogsCompanion companion) {
-    return into(workoutLogs).insert(companion);
+  /// Inserts (uploads) a new workout log to Firestore. Returns a
+  /// placeholder `1` so the call shape matches the old Drift API.
+  Future<int> insertLog(WorkoutLogModel model) async {
+    final fid = model.firestoreId ?? newFirestoreId();
+    await _sync.uploadWorkoutLog(
+      model.copyWith(firestoreId: fid),
+    );
+    return 1;
   }
 
-  Future<bool> updateLog(WorkoutLog log) {
-    return update(workoutLogs).replace(log);
+  Future<bool> updateLog(WorkoutLogModel model) async {
+    await _sync.uploadWorkoutLog(model);
+    return true;
   }
 
-  Future<int> deleteLog(int id) {
-    return (delete(workoutLogs)..where((tbl) => tbl.id.equals(id))).go();
+  Future<int> deleteLog(String firestoreId) async {
+    await _sync.deleteWorkoutLog(firestoreId);
+    return 1;
   }
 
-  Future<WorkoutLog?> getLogById(int id) {
-    return (select(workoutLogs)..where((tbl) => tbl.id.equals(id)))
-        .getSingleOrNull();
-  }
+  Future<WorkoutLogModel?> getLogById(String firestoreId) =>
+      _sync.getLogById(firestoreId);
 
-  Stream<List<WorkoutLog>> watchAllLogs() {
-    return (select(workoutLogs)
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.performedAt)]))
-        .watch();
-  }
+  Stream<List<WorkoutLogModel>> watchAllLogs() => _sync.watchAllLogs();
 
-  Future<WorkoutLog?> findLogForDay({
-    required int sessionId,
+  Future<WorkoutLogModel?> findLogForDay({
+    required String sessionFirestoreId,
+    required DateTime day,
+  }) => _sync.findLogForDay(sessionFid: sessionFirestoreId, day: day);
+
+  Stream<WorkoutLogModel?> watchLogForDay({
+    required String sessionFirestoreId,
     required DateTime day,
   }) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    return (select(workoutLogs)
-          ..where((tbl) =>
-              tbl.sessionId.equals(sessionId) &
-              tbl.performedAt.isBiggerOrEqualValue(start) &
-              tbl.performedAt.isSmallerThanValue(end))
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.performedAt)]))
-        .getSingleOrNull();
+    return _sync.watchLogsForDay(day).map((logs) {
+      for (final log in logs) {
+        if (log.sessionFirestoreId == sessionFirestoreId) return log;
+      }
+      return null;
+    });
   }
 
-  Stream<WorkoutLog?> watchLogForDay({
-    required int sessionId,
-    required DateTime day,
-  }) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    return (select(workoutLogs)
-          ..where((tbl) =>
-              tbl.sessionId.equals(sessionId) &
-              tbl.performedAt.isBiggerOrEqualValue(start) &
-              tbl.performedAt.isSmallerThanValue(end))
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.performedAt)])
-          ..limit(1))
-        .watchSingleOrNull();
-  }
-
-  /// All logs whose [WorkoutLog.performedAt] falls inside the half-open
-  /// range `[start, end)`. Used by the calendar to render highlighting dots
-  /// for a visible month.
-  Stream<List<WorkoutLog>> watchLogsInRange({
+  /// All logs whose `performedAt` falls inside the half-open range
+  /// `[start, end)`.
+  Stream<List<WorkoutLogModel>> watchLogsInRange({
     required DateTime start,
     required DateTime end,
-  }) {
-    return (select(workoutLogs)
-          ..where((tbl) =>
-              tbl.performedAt.isBiggerOrEqualValue(start) &
-              tbl.performedAt.isSmallerThanValue(end))
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.performedAt)]))
-        .watch();
-  }
+  }) => _sync.watchLogsInRange(start: start, end: end);
 
-  /// Every log performed on the given calendar [day]. A day may contain
-  /// multiple logs (one per session performed on that day).
-  Stream<List<WorkoutLog>> watchLogsForDay(DateTime day) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    return (select(workoutLogs)
-          ..where((tbl) =>
-              tbl.performedAt.isBiggerOrEqualValue(start) &
-              tbl.performedAt.isSmallerThanValue(end))
-          ..orderBy([(tbl) => OrderingTerm.desc(tbl.performedAt)]))
-        .watch();
-  }
+  /// Every log performed on the given calendar day.
+  Stream<List<WorkoutLogModel>> watchLogsForDay(DateTime day) =>
+      _sync.watchLogsForDay(day);
 
-  /// All entries for every log performed on the given calendar [day],
-  /// joined with the parent [WorkoutLog] so we can group entries by log.
-  /// Returns a list of rows where each row exposes the entry plus its
-  /// parent log id (read via the join key).
-  Stream<List<DayEntryRow>> watchEntriesForDay(DateTime day) {
-    final start = DateTime(day.year, day.month, day.day);
-    final end = start.add(const Duration(days: 1));
-    final query = select(workoutLogEntries).join([
-      leftOuterJoin(
-        workoutLogs,
-        workoutLogs.id.equalsExp(workoutLogEntries.workoutLogId),
-      ),
-    ])
-      ..where(workoutLogs.performedAt.isBiggerOrEqualValue(start) &
-          workoutLogs.performedAt.isSmallerThanValue(end))
-      ..orderBy([
-        OrderingTerm.asc(workoutLogEntries.position),
-        OrderingTerm.asc(workoutLogEntries.setIndex),
-      ]);
-    return query.watch().map(
-          (rows) => <DayEntryRow>[
-            for (final r in rows)
-              DayEntryRow(
-                entry: r.readTable(workoutLogEntries),
-                logId: r.readTable(workoutLogs).id,
-              ),
-          ],
-        );
-  }
+  /// All entries for every log performed on the given calendar day,
+  /// joined with each parent log's `firestoreId` so the UI can group by
+  /// log id.
+  Stream<List<DayEntryRow>> watchEntriesForDay(DateTime day) =>
+      _sync.watchEntriesForDay(day);
 
   // ---------------------------------------------------------------------------
   // Entries
   // ---------------------------------------------------------------------------
 
-  Future<int> insertEntry(WorkoutLogEntriesCompanion companion) {
-    return into(workoutLogEntries).insert(companion);
+  Future<int> insertEntry(WorkoutLogEntryModel model) async {
+    final fid = model.firestoreId ?? newFirestoreId();
+    await _sync.uploadWorkoutLogEntry(model.copyWith(firestoreId: fid));
+    return 1;
   }
 
-  Future<bool> updateEntry(WorkoutLogEntry entry) {
-    return update(workoutLogEntries).replace(entry);
+  Future<bool> updateEntry(WorkoutLogEntryModel model) async {
+    await _sync.uploadWorkoutLogEntry(model);
+    return true;
   }
 
-  Future<int> deleteEntry(int id) {
-    return (delete(workoutLogEntries)..where((tbl) => tbl.id.equals(id)))
-        .go();
+  Future<int> deleteEntry(String firestoreId) async {
+    await _sync.deleteWorkoutLogEntry(firestoreId);
+    return 1;
   }
 
-  Future<List<WorkoutLogEntry>> getEntriesForLog(int logId) {
-    return (select(workoutLogEntries)
-          ..where((tbl) => tbl.workoutLogId.equals(logId))
-          ..orderBy([
-            (tbl) => OrderingTerm.asc(tbl.position),
-            (tbl) => OrderingTerm.asc(tbl.setIndex),
-          ]))
-        .get();
+  Future<List<WorkoutLogEntryModel>> getEntriesForLog(String logFid) =>
+      _sync.getEntriesForLog(logFid);
+
+  /// Same as [getEntriesForLog] but accepts the int hash form
+  /// (`WorkoutLog.id`) so the existing UI code that only has the int
+  /// doesn't need to know about Firestore ids. Internally scans all
+  /// logs to translate the int hash back to its firestoreId.
+  Future<List<WorkoutLogEntryModel>> getEntriesForLogById(int logId) async {
+    final matched = await _resolveLogById(logId);
+    if (matched == null) return const <WorkoutLogEntryModel>[];
+    return _sync.getEntriesForLog(matched);
   }
 
-  Stream<List<WorkoutLogEntry>> watchEntriesForLog(int logId) {
-    return (select(workoutLogEntries)
-          ..where((tbl) => tbl.workoutLogId.equals(logId))
-          ..orderBy([
-            (tbl) => OrderingTerm.asc(tbl.position),
-            (tbl) => OrderingTerm.asc(tbl.setIndex),
-          ]))
-        .watch();
+  Future<WorkoutLogEntryModel?> getEntryById(String firestoreId) =>
+      _sync.getEntryById(firestoreId);
+
+  /// Same as [getEntryById] but accepts the int hash form
+  /// (`WorkoutLogEntry.id`). Internally scans all entries to translate
+  /// the int hash back to its firestoreId. Needed because the
+  /// delete-from-tracking flow only has the int `WorkoutLogEntry.id`
+  /// available, not the Firestore id.
+  Future<WorkoutLogEntryModel?> getEntryByIdByHash(int entryId) async {
+    final fid = await _resolveEntryById(entryId);
+    if (fid == null) return null;
+    return _sync.getEntryById(fid);
+  }
+
+  /// Same as [deleteEntry] but accepts the int hash form
+  /// (`WorkoutLogEntry.id`) so the delete-from-tracking flow can fire
+  /// without ever resolving the Firestore id.
+  Future<int> deleteEntryByHash(int entryId) async {
+    final fid = await _resolveEntryById(entryId);
+    if (fid == null) return 0;
+    return deleteEntry(fid);
+  }
+
+  Future<String?> _resolveEntryById(int entryId) async {
+    final logs = await _sync.watchAllLogs().first;
+    for (final log in logs) {
+      if (log.firestoreId == null) continue;
+      final entries = await _sync.getEntriesForLog(log.firestoreId!);
+      for (final e in entries) {
+        if (e.id == entryId) return e.firestoreId;
+      }
+    }
+    return null;
+  }
+
+  Future<WorkoutLogModel?> findLogByFirestoreId(String fid) =>
+      _sync.findLogByFirestoreId(fid);
+
+  Future<WorkoutLogEntryModel?> findEntryByFirestoreId(String fid) =>
+      _sync.findEntryByFirestoreId(fid);
+
+  Stream<List<WorkoutLogEntryModel>> watchEntriesForLog(String logFid) =>
+      _sync.watchEntriesForLog(logFid);
+
+  /// Same as [watchEntriesForLog] but accepts the int hash form
+  /// (`WorkoutLog.id`). Switches to the matching log's actual
+  /// firestoreId on first emit.
+  Stream<List<WorkoutLogEntryModel>> watchEntriesForLogById(int logId) async* {
+    final resolved = await _resolveLogById(logId);
+    if (resolved == null) {
+      yield const <WorkoutLogEntryModel>[];
+      return;
+    }
+    yield* _sync.watchEntriesForLog(resolved);
+  }
+
+  Future<String?> _resolveLogById(int logId) async {
+    final logs = await _sync.watchAllLogs().first;
+    for (final log in logs) {
+      if (log.id == logId) return log.firestoreId;
+    }
+    return null;
   }
 
   /// Streams the single entry per workout for today's log, keyed by
-  /// workoutId. The contract for v7+ is that there is exactly one row
-  /// per `(workoutLogId, workoutId)` per day, so this collapses the list
-  /// into a map the UI can index directly.
-  Stream<Map<int, WorkoutLogEntry>> watchEntriesByWorkoutForLog(int logId) {
-    return (select(workoutLogEntries)
-          ..where((tbl) => tbl.workoutLogId.equals(logId)))
-        .watch()
-        .map<Map<int, WorkoutLogEntry>>((rows) {
-      final map = <int, WorkoutLogEntry>{};
-      for (final r in rows) {
-        map[r.workoutId] = r;
+  /// `workoutFirestoreId`. Falls back to the int `workoutId.hashCode`
+  /// cast as a string when the Firestore id is missing (legacy rows
+  /// that pre-date the migration). Callers that consume this map need
+  /// to be aware of the mixed key space — the today page's data
+  /// source translates it back to an int-keyed map using
+  /// `entry.workoutId`.
+  Stream<Map<String, WorkoutLogEntryModel>> watchEntriesByWorkoutForLog(
+    String logFid,
+  ) {
+    return _sync.watchEntriesForLog(logFid).map((entries) {
+      final map = <String, WorkoutLogEntryModel>{};
+      for (final e in entries) {
+        final wfid = e.workoutFirestoreId;
+        if (wfid != null && wfid.isNotEmpty) {
+          map[wfid] = e;
+        } else if (e.workoutId != 0) {
+          // Legacy rows: synthesise a stable string key from the int
+          // hash so the entry still surfaces in the join. The today
+          // page's repository translates this back to an int.
+          map['__legacy_${e.workoutId}'] = e;
+        }
       }
       return map;
     });
   }
 
   /// Returns the most recent prior entry per workout id (excluding
-  /// entries that belong to today's log). Used by the prefill flow so
-  /// the tracking card can be seeded with yesterday's values.
-  Future<Map<int, WorkoutLogEntry>> getLastEntriesForWorkouts(
-    List<int> workoutIds, {
+  /// entries that belong to today's log). Result is keyed by
+  /// `workoutFirestoreId`.
+  Future<Map<String, WorkoutLogEntryModel>> getLastEntriesForWorkouts(
+    List<String> workoutFirestoreIds, {
     required DateTime beforeDay,
-  }) async {
-    if (workoutIds.isEmpty) return const {};
-    final cutoff = DateTime(beforeDay.year, beforeDay.month, beforeDay.day);
-    // Pull every entry for the requested workouts strictly before today
-    // and pick the newest per workout. Keeps the query small for typical
-    // session sizes (a handful of exercises).
-    final query = select(workoutLogEntries).join([
-      innerJoin(
-        workoutLogs,
-        workoutLogs.id.equalsExp(workoutLogEntries.workoutLogId),
-      ),
-    ])
-      ..where(workoutLogEntries.workoutId.isIn(workoutIds) &
-          workoutLogs.performedAt.isSmallerThanValue(cutoff))
-      ..orderBy([OrderingTerm.desc(workoutLogs.performedAt)]);
-    final rows = await query.get();
-    final out = <int, WorkoutLogEntry>{};
-    for (final row in rows) {
-      final entry = row.readTable(workoutLogEntries);
-      if (out.containsKey(entry.workoutId)) continue;
-      out[entry.workoutId] = entry;
-    }
-    return out;
-  }
+  }) => _sync.getLastEntriesForWorkouts(
+    workoutFirestoreIds,
+    beforeDay: beforeDay,
+  );
 }
 
-/// A joined row returned by [WorkoutLogDao.watchEntriesForDay]: the entry
-/// plus its parent log id, used to group entries by log in the history
-/// read path.
-class DayEntryRow {
-  const DayEntryRow({required this.entry, required this.logId});
+/// `DayEntryRow` is defined on [SyncService] (re-imported above). It
+/// describes a joined (entry, logFid) pair returned by
+/// [WorkoutLogDao.watchEntriesForDay] for grouping entries by log in
+/// the history read path.
 
-  final WorkoutLogEntry entry;
-  final int logId;
+// ---------------------------------------------------------------------------
+// copyWith helpers used by the DAO for insert/update flows. They live
+// here (rather than on the model) so the model stays a pure data
+// carrier without any DAO coupling.
+// ---------------------------------------------------------------------------
+
+extension on WorkoutLogModel {
+  WorkoutLogModel copyWith({String? firestoreId}) {
+    return WorkoutLogModel(
+      id: id,
+      sessionId: sessionId,
+      performedAt: performedAt,
+      firestoreId: firestoreId ?? this.firestoreId,
+      sessionFirestoreId: sessionFirestoreId,
+      updatedAt: updatedAt,
+    );
+  }
 }

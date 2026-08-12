@@ -69,9 +69,7 @@ class CalendarDayCell extends StatelessWidget {
           children: [
             Text(
               '${date.day}',
-              style: baseStyle?.copyWith(
-                color: isToday ? Colors.white : null,
-              ),
+              style: baseStyle?.copyWith(color: isToday ? Colors.white : null),
             ),
             const SizedBox(height: AppSpacing.xxs),
             if (hasWorkout)
@@ -80,9 +78,7 @@ class CalendarDayCell extends StatelessWidget {
                 height: 6,
                 decoration: BoxDecoration(
                   gradient: isToday ? null : AppTheme.heroGradient,
-                  color: isToday
-                      ? Colors.white.withValues(alpha: 0.95)
-                      : null,
+                  color: isToday ? Colors.white.withValues(alpha: 0.95) : null,
                   shape: BoxShape.circle,
                 ),
               )

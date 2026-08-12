@@ -37,17 +37,17 @@ class _StreakPageState extends State<StreakPage> {
 
       final workoutDays = <DateTime>{};
       for (final log in logs) {
-        workoutDays.add(DateTime(
-          log.performedAt.year,
-          log.performedAt.month,
-          log.performedAt.day,
-        ));
+        workoutDays.add(
+          DateTime(
+            log.performedAt.year,
+            log.performedAt.month,
+            log.performedAt.day,
+          ),
+        );
       }
 
       final now = DateTime.now();
-      final thisYear = logs
-          .where((l) => l.performedAt.year == now.year)
-          .length;
+      final thisYear = logs.where((l) => l.performedAt.year == now.year).length;
 
       return _StreakStats(
         streakDays: _computeStreak(workoutDays, frozen, now),
@@ -174,7 +174,9 @@ class _StreakPageState extends State<StreakPage> {
                           vertical: AppSpacing.xs,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF60A5FA).withValues(alpha: 0.25),
+                          color: const Color(
+                            0xFF60A5FA,
+                          ).withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Row(
@@ -247,10 +249,10 @@ class _StreakPageState extends State<StreakPage> {
                       child: Text(
                         active
                             ? 'You\'ve trained (or rested on a freeze) '
-                                '${stats.streakDays} day'
-                                '${stats.streakDays == 1 ? '' : 's'} in a row.'
+                                  '${stats.streakDays} day'
+                                  '${stats.streakDays == 1 ? '' : 's'} in a row.'
                             : 'Log a workout or freeze a day to start a '
-                                'new streak.',
+                                  'new streak.',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface,
                           fontWeight: FontWeight.w600,

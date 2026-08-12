@@ -5,18 +5,17 @@ import '../../profile/data/profile_service.dart';
 import '../domain/entities/auth_user.dart';
 import '../domain/repositories/auth_repository.dart';
 
-/// In-memory + DB-backed authentication state.
+/// In-memory authentication state, backed by Firebase Auth.
 ///
-/// Registered as an eager singleton so [GoRouter] can wire it as a
-/// `refreshListenable` and react to login/logout events. Listeners
-/// get notified on every state change so the drawer, profile page,
-/// and router redirect all update at once.
+/// Firestore is the single source of truth for user data; there is no
+/// local cache to clear on logout. The router reads [isSignedIn] via
+/// `refreshListenable` to redirect between login and the main shell.
 class AuthService extends ChangeNotifier {
   AuthService({
     required AuthRepository repository,
     ProfileService? profileService,
-  })  : _repository = repository,
-        _profileService = profileService;
+  }) : _repository = repository,
+       _profileService = profileService;
 
   final AuthRepository _repository;
   final ProfileService? _profileService;
@@ -37,9 +36,6 @@ class AuthService extends ChangeNotifier {
     final idResult = await _repository.currentUserId();
     final id = idResult.getOrElse((_) => null);
     if (id != null) {
-      // We don't load the full AuthUser here — the router only
-      // needs to know if a session exists. Full profile is
-      // rehydrated on signup/login.
       _currentUser = AuthUser(
         id: id,
         username: '',
@@ -50,9 +46,6 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Creates a new account. On success, seeds [ProfileService] with
-  /// the chosen name + email so the drawer / profile page show the
-  /// new identity without an extra step.
   Future<AuthResult> signup({
     required String username,
     required String password,
@@ -67,20 +60,15 @@ class AuthService extends ChangeNotifier {
       displayName: displayName,
       email: email,
     );
-    return result.fold(
-      (failure) => AuthResult.failure(failure),
-      (user) {
-        _currentUser = user;
-        _seedProfile(name: displayName, email: email);
-        notifyListeners();
-        return AuthResult.success(user);
-      },
-    );
+    return result.fold((failure) => AuthResult.failure(failure), (user) async {
+      _currentUser = user;
+      _seedProfile(name: displayName, email: email);
+      // Firestore is the source of truth — no local restore needed.
+      notifyListeners();
+      return AuthResult.success(user);
+    });
   }
 
-  /// Verifies credentials. On success, seeds the profile from the
-  /// last-known name/email so the drawer / profile page show the
-  /// logged-in user's identity.
   Future<AuthResult> login({
     required String username,
     required String password,
@@ -89,28 +77,27 @@ class AuthService extends ChangeNotifier {
       username: username,
       password: password,
     );
-    return result.fold(
-      (failure) => AuthResult.failure(failure),
-      (user) {
-        _currentUser = user;
-        notifyListeners();
-        return AuthResult.success(user);
-      },
-    );
+    return result.fold((failure) => AuthResult.failure(failure), (user) async {
+      _currentUser = user;
+      // Firestore is the source of truth — every page subscribes to
+      // the relevant collection on first render, so the UI populates
+      // from cloud without any explicit restore step.
+      notifyListeners();
+      return AuthResult.success(user);
+    });
   }
 
-  /// Clears the session. Profile name/email remain populated so the
-  /// next login shows the same identity.
+  /// Clears the session by signing the user out of Firebase Auth.
+  /// No local cache to clear (Firestore is the only source of truth
+  /// and is keyed by uid, so the next sign-in gets a fresh collection
+  /// view).
   Future<AuthResult> logout() async {
     final result = await _repository.logout();
-    return result.fold(
-      (failure) => AuthResult.failure(failure),
-      (_) {
-        _currentUser = null;
-        notifyListeners();
-        return AuthResult.success(null);
-      },
-    );
+    return result.fold((failure) => AuthResult.failure(failure), (_) {
+      _currentUser = null;
+      notifyListeners();
+      return AuthResult.success(null);
+    });
   }
 
   /// Push the new identity into [ProfileService] so the drawer /
@@ -120,7 +107,6 @@ class AuthService extends ChangeNotifier {
   void _seedProfile({required String name, required String email}) {
     try {
       final svc = _profileService ?? getIt<ProfileService>();
-      // Fire-and-forget — ProfileService has its own persistence.
       svc.updateName(name);
       svc.updateEmail(email);
     } catch (_) {
@@ -135,11 +121,9 @@ class AuthService extends ChangeNotifier {
 class AuthResult {
   const AuthResult._({this.user, this.failure});
 
-  factory AuthResult.success(AuthUser? user) =>
-      AuthResult._(user: user);
+  factory AuthResult.success(AuthUser? user) => AuthResult._(user: user);
 
-  factory AuthResult.failure(Object failure) =>
-      AuthResult._(failure: failure);
+  factory AuthResult.failure(Object failure) => AuthResult._(failure: failure);
 
   final AuthUser? user;
   final Object? failure;
