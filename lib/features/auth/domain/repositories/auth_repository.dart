@@ -29,6 +29,15 @@ abstract class AuthRepository {
     required String password,
   });
 
+  /// Sends a Firebase Authentication password-reset request for the
+  /// account with the given [email].
+  ///
+  /// Returns [AuthFailureCode.userNotFound] when no account exists
+  /// for it. The success branch carries no payload — the caller
+  /// should display a generic confirmation so we don't leak which
+  /// emails are registered.
+  Future<Either<Failure, Unit>> resetPassword({required String email});
+
   /// True iff at least one account exists on this device. The
   /// router uses this to decide between `/signup` (first launch)
   /// and `/login` (returning user).

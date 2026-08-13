@@ -560,6 +560,42 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to log out of your account?';
 
   @override
+  String get authForgotPassword => 'Forgot Password?';
+
+  @override
+  String get authForgotPasswordTitle => 'Reset your password';
+
+  @override
+  String get authForgotPasswordBody =>
+      'Enter the email address you registered with. We\'ll send a reset link to that account.';
+
+  @override
+  String get authForgotPasswordSend => 'Send reset link';
+
+  @override
+  String get authForgotPasswordCancel => 'Cancel';
+
+  @override
+  String get authForgotPasswordSuccess =>
+      'If an account exists for that email, a password-reset link is on its way.';
+
+  @override
+  String get authForgotPasswordSuccessWithSpamHint =>
+      'If an account exists, a password-reset link is on its way. Check your spam folder if you don\'t see it within a few minutes.';
+
+  @override
+  String get authForgotPasswordUserNotFound =>
+      'No account is registered with that email.';
+
+  @override
+  String get authForgotPasswordInvalidUsername =>
+      'Please enter a valid email address.';
+
+  @override
+  String get authForgotPasswordGenericError =>
+      'Could not send reset link. Please try again.';
+
+  @override
   String get profileTitle => 'Profile';
 
   @override

@@ -87,8 +87,38 @@ class _LoginPageState extends State<LoginPage> {
         failure.code == AuthFailureCode.invalidCredentials) {
       setState(() => _generalError = l10n.authInvalidCredentials);
     } else {
-      setState(() => _generalError = failure?.toString() ?? 'Try again.');
+      // Never leak the raw Failure.toString() (e.g.
+      // "UnexpectedFailure[cloud_firestore/permission-denied…]") to
+      // the user — surface a generic retry hint instead.
+      setState(() => _generalError = 'Could not sign in. Please try again.');
     }
+  }
+
+  /// Opens the Forgot Password dialog. The dialog has its own username
+  /// field, submit/cancel buttons, and inline feedback. We surface
+  /// a generic success snackbar on the "reset issued" path and an
+  /// inline error on validation / lookup failure.
+  Future<void> _showForgotPasswordDialog(BuildContext context) async {
+    if (mounted) {
+      FocusScope.of(context).unfocus();
+    }
+    final l10n = AppLocalizations.of(context);
+    final result = await showDialog<_ForgotPasswordOutcome>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _ForgotPasswordDialog(l10n: l10n),
+    );
+    if (!mounted || result == null) return;
+    if (!context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(l10n.authForgotPasswordSuccessWithSpamHint),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 6),
+      ),
+    );
   }
 
   @override
@@ -201,6 +231,21 @@ class _LoginPageState extends State<LoginPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : Text(l10n.authLoginButton),
+                  ),
+                  // "Forgot Password?" — sits directly below the
+                  // primary CTA so it reads as a secondary action on
+                  // the sign-in form. Opens a dialog that asks for
+                  // the sign-in username, looks it up via the public
+                  // `usernames` collection, and dispatches the
+                  // Firebase password-reset flow.
+                  Align(
+                    alignment: Alignment.center,
+                    child: TextButton(
+                      onPressed: _submitting
+                          ? null
+                          : () => _showForgotPasswordDialog(context),
+                      child: Text(l10n.authForgotPassword),
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.md),
                   TextButton(
@@ -361,6 +406,181 @@ class _BannerError extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Tagged outcome returned by [_ForgotPasswordDialog] so the host
+/// page can show a snackbar without depending on dialog internals.
+/// Only the success branch is surfaced as a snackbar — failures are
+/// shown inline in the dialog itself.
+class _ForgotPasswordOutcome {
+  const _ForgotPasswordOutcome({required this.isSuccess});
+
+  final bool isSuccess;
+}
+
+/// Dialog asking for the sign-in username and dispatching the
+/// Firebase password-reset flow. Looks up the username via the
+/// publicly-readable `usernames/{username}` collection so the
+/// reset works while the user is signed out. Lives in this file
+/// rather than its own widget file because it's tightly coupled
+/// to the login page and only used here.
+class _ForgotPasswordDialog extends StatefulWidget {
+  const _ForgotPasswordDialog({required this.l10n});
+
+  final AppLocalizations l10n;
+
+  @override
+  State<_ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
+  final _emailCtl = TextEditingController();
+  final _emailFocus = FocusNode();
+
+  String? _emailError;
+  bool _submitting = false;
+
+  late final AuthService _auth = getIt<AuthService>();
+
+  @override
+  void dispose() {
+    _emailCtl.dispose();
+    _emailFocus.dispose();
+    super.dispose();
+  }
+
+  bool _validateLocal() {
+    final email = _emailCtl.text.trim();
+    final ok = email.isNotEmpty &&
+        RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+    setState(() {
+      _emailError = ok ? null : widget.l10n.authForgotPasswordInvalidUsername;
+    });
+    return ok;
+  }
+
+  Future<void> _submit() async {
+    if (_submitting) return;
+    if (!_validateLocal()) return;
+
+    if (mounted) {
+      FocusScope.of(context).unfocus();
+    }
+
+    setState(() {
+      _submitting = true;
+      _emailError = null;
+    });
+
+    final result = await _auth.resetPassword(
+      email: _emailCtl.text.trim(),
+    );
+
+    if (!mounted) return;
+
+    if (result.isSuccess) {
+      Navigator.of(context).pop(
+        const _ForgotPasswordOutcome(isSuccess: true),
+      );
+      return;
+    }
+
+    final failure = result.failure;
+    final isInvalid = failure is AuthFailure &&
+        failure.code == AuthFailureCode.invalidCredentials;
+    final message = isInvalid
+        ? widget.l10n.authForgotPasswordInvalidUsername
+        : widget.l10n.authForgotPasswordGenericError;
+
+    setState(() {
+      _submitting = false;
+      _emailError = message;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = widget.l10n;
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      title: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              gradient: AppTheme.heroGradient,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.lock_reset_rounded,
+              color: Colors.white,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Text(
+              l10n.authForgotPasswordTitle,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.authForgotPasswordBody,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          TextField(
+            controller: _emailCtl,
+            focusNode: _emailFocus,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _submit(),
+            autofocus: true,
+            autofillHints: const [AutofillHints.email],
+            decoration: InputDecoration(
+              labelText: l10n.authEmail,
+              prefixIcon: const Icon(Icons.alternate_email_rounded),
+              errorText: _emailError,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.authForgotPasswordCancel),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : Text(l10n.authForgotPasswordSend),
+        ),
+      ],
     );
   }
 }

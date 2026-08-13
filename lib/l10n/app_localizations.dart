@@ -1090,6 +1090,66 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to log out of your account?'**
   String get authLogoutConfirmBody;
 
+  /// No description provided for @authForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot Password?'**
+  String get authForgotPassword;
+
+  /// No description provided for @authForgotPasswordTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset your password'**
+  String get authForgotPasswordTitle;
+
+  /// No description provided for @authForgotPasswordBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the email address you registered with. We\'ll send a reset link to that account.'**
+  String get authForgotPasswordBody;
+
+  /// No description provided for @authForgotPasswordSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset link'**
+  String get authForgotPasswordSend;
+
+  /// No description provided for @authForgotPasswordCancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get authForgotPasswordCancel;
+
+  /// No description provided for @authForgotPasswordSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists for that email, a password-reset link is on its way.'**
+  String get authForgotPasswordSuccess;
+
+  /// No description provided for @authForgotPasswordSuccessWithSpamHint.
+  ///
+  /// In en, this message translates to:
+  /// **'If an account exists, a password-reset link is on its way. Check your spam folder if you don\'t see it within a few minutes.'**
+  String get authForgotPasswordSuccessWithSpamHint;
+
+  /// No description provided for @authForgotPasswordUserNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No account is registered with that email.'**
+  String get authForgotPasswordUserNotFound;
+
+  /// No description provided for @authForgotPasswordInvalidUsername.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address.'**
+  String get authForgotPasswordInvalidUsername;
+
+  /// No description provided for @authForgotPasswordGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not send reset link. Please try again.'**
+  String get authForgotPasswordGenericError;
+
   /// No description provided for @profileTitle.
   ///
   /// In en, this message translates to:

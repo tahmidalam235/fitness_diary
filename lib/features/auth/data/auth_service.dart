@@ -87,6 +87,18 @@ class AuthService extends ChangeNotifier {
     });
   }
 
+  /// Sends a Firebase Authentication password-reset request for the
+  /// account with the given [email]. Does not change the current
+  /// session — the caller stays signed out until they reset and log
+  /// back in with the new password.
+  Future<AuthResult> resetPassword({required String email}) async {
+    final result = await _repository.resetPassword(email: email);
+    return result.fold(
+      (failure) => AuthResult.failure(failure),
+      (_) => AuthResult.success(null),
+    );
+  }
+
   /// Clears the session by signing the user out of Firebase Auth.
   /// No local cache to clear (Firestore is the only source of truth
   /// and is keyed by uid, so the next sign-in gets a fresh collection

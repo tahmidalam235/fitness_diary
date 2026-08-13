@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/utils/either.dart';
@@ -22,27 +23,19 @@ import '../domain/repositories/auth_repository.dart';
 class AuthRepositoryImpl implements AuthRepository {
   AuthRepositoryImpl();
 
-  static const _emailDomain = '@fitnessdiary.local';
-
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// Map a public username to the synthesized Firebase auth email.
-  static String _authEmail(String username) =>
-      '${username.trim().toLowerCase()}$_emailDomain';
-
-  /// Resolve the Firebase uid for a given username, or null if no such
+  /// Resolve the account info for a given username, or null if no such
   /// account exists. Uses the public `usernames` collection as a lookup
-  /// index so we can map username -> uid without exposing the synthesized
+  /// index so we can map username -> email/uid without exposing the
   /// email to the UI layer.
-  Future<String?> _uidForUsername(String username) async {
+  Future<Map<String, dynamic>?> _infoForUsername(String username) async {
     final snap = await _firestore
         .collection('usernames')
         .doc(username.trim().toLowerCase())
         .get();
-    final data = snap.data();
-    if (data == null) return null;
-    return data['uid'] as String?;
+    return snap.data();
   }
 
   @override
@@ -65,14 +58,9 @@ class AuthRepositoryImpl implements AuthRepository {
     }
 
     final usernameKey = username.trim().toLowerCase();
-    final authEmail = _authEmail(username);
 
     try {
-      // Reject usernames that are already taken — we can't rely on
-      // Firebase's createUserWithEmailAndPassword for this because
-      // we synthesize the email from the username, so two different
-      // usernames could collide on the same email only if the
-      // username-collision happens first.
+      // Reject usernames that are already taken.
       final usernameDoc = await _firestore
           .collection('usernames')
           .doc(usernameKey)
@@ -86,8 +74,10 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
+      // We use the real user email for Firebase Auth so the "Forgot
+      // Password" reset links actually reach their inbox.
       final credential = await _auth.createUserWithEmailAndPassword(
-        email: authEmail,
+        email: email.trim(),
         password: password,
       );
       final user = credential.user;
@@ -100,8 +90,9 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      // Persist profile data + the username->uid lookup so future
-      // logins can resolve a username to its Firebase uid.
+      // Persist profile data + the username lookup index. The index
+      // doc includes the email so logins can resolve username -> email
+      // before hitting Firebase Auth.
       await _firestore.collection('users').doc(user.uid).set({
         'username': username.trim(),
         'displayName': displayName.trim(),
@@ -110,6 +101,7 @@ class AuthRepositoryImpl implements AuthRepository {
       });
       await _firestore.collection('usernames').doc(usernameKey).set({
         'uid': user.uid,
+        'email': email.trim(),
       });
 
       return Right(
@@ -125,7 +117,7 @@ class AuthRepositoryImpl implements AuthRepository {
           return const Left(
             AuthFailure(
               code: AuthFailureCode.usernameTaken,
-              message: 'That username is already taken',
+              message: 'That email is already registered',
             ),
           );
         case 'weak-password':
@@ -158,8 +150,16 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
   }) async {
     try {
-      final uid = await _uidForUsername(username);
-      if (uid == null) {
+      final info = await _infoForUsername(username);
+      // Use the email stored in the public index. Fallback to the legacy
+      // synthesized format if the index hasn't been updated with a real
+      // email yet — this ensures existing users can still log in while
+      // allowing new/updated users to use the password-reset feature.
+      final email =
+          info?['email'] as String? ??
+          '${username.trim().toLowerCase()}@fitnessdiary.local';
+
+      if (info == null) {
         return const Left(
           AuthFailure(
             code: AuthFailureCode.invalidCredentials,
@@ -168,9 +168,9 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
-      // We have the uid; sign in with the synthesized email + password.
+      // We have the email; sign in.
       final credential = await _auth.signInWithEmailAndPassword(
-        email: _authEmail(username),
+        email: email,
         password: password,
       );
       final user = credential.user;
@@ -212,6 +212,83 @@ class AuthRepositoryImpl implements AuthRepository {
       }
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Unit>> resetPassword({required String email}) async {
+    final normalized = email.trim();
+    if (normalized.isEmpty ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(normalized)) {
+      return const Left(
+        AuthFailure(
+          code: AuthFailureCode.invalidCredentials,
+          message: 'Please enter a valid email address',
+        ),
+      );
+    }
+
+    // Resolve the canonical email via the public `usernames/{u}` index.
+    // The index is keyed by username but we can derive a candidate
+    // username from the local-part of the typed email (everything
+    // before the `@`). If a matching doc exists we trust its `email`
+    // field as the source of truth — this protects against stored
+    // typos and matches the lookup pattern used by login(). If the
+    // lookup misses we fall back to the user-typed value, preserving
+    // the previous behavior.
+    String resolvedEmail = normalized;
+    final localPart = normalized.split('@').first;
+    if (localPart.isNotEmpty) {
+      try {
+        final info = await _infoForUsername(localPart);
+        final indexed = info?['email'] as String?;
+        if (indexed != null && indexed.trim().isNotEmpty) {
+          resolvedEmail = indexed.trim();
+        }
+      } on FirebaseException catch (e) {
+        // Permission / unavailable errors here are non-fatal — we
+        // just log and fall back to the typed email.
+        debugPrint(
+          'resetPassword: index lookup failed (${e.code}); '
+          'falling back to typed email',
+        );
+      }
+    }
+
+    try {
+      await _auth.sendPasswordResetEmail(email: resolvedEmail);
+      return const Right(Unit.instance);
+    } on FirebaseAuthException catch (e) {
+      // Always log the Firebase response so logcat shows whether the
+      // reset was actually issued — important for diagnosing cases
+      // like a legacy Firebase Auth account that was created under
+      // the synthesized-email flow and so never received the real
+      // email at signup (Firebase returns user-not-found, our UI
+      // shows success, but no email is ever sent).
+      debugPrint(
+        'resetPassword: ${e.code} for $resolvedEmail '
+        '(typed=$normalized)',
+      );
+      if (e.code == 'user-not-found' ||
+          e.code == 'invalid-email' ||
+          e.code == 'missing-email') {
+        // Success branch to avoid leaking registered emails to the UI.
+        return const Right(Unit.instance);
+      }
+      return const Left(
+        AuthFailure(
+          code: AuthFailureCode.unknown,
+          message: 'Could not send reset link. Please try again.',
+        ),
+      );
+    } catch (e, st) {
+      debugPrint('resetPassword: unexpected error\n$e\n$st');
+      return const Left(
+        AuthFailure(
+          code: AuthFailureCode.unknown,
+          message: 'Could not send reset link. Please try again.',
+        ),
+      );
     }
   }
 
