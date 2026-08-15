@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 
+import '../../../workout/domain/entities/workout.dart';
 import '../../domain/entities/session.dart';
 
 /// Base class for all events handled by [SessionBloc].
@@ -24,6 +25,18 @@ class SessionsReceived extends SessionEvent {
 
   @override
   List<Object?> get props => [sessions];
+}
+
+/// Internal event carrying the latest snapshot from the workouts
+/// stream. Used by [SessionBloc] to re-derive per-session workout
+/// counts whenever a workout is added, edited, deleted, or reordered.
+class WorkoutCountsReceived extends SessionEvent {
+  const WorkoutCountsReceived(this.workouts);
+
+  final List<Workout> workouts;
+
+  @override
+  List<Object?> get props => [workouts];
 }
 
 /// Loads all sessions once.

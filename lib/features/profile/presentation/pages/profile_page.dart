@@ -8,6 +8,7 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
 import '../../../auth/data/auth_service.dart';
 import '../../data/profile_service.dart';
 
@@ -57,18 +58,27 @@ class ProfilePage extends StatelessWidget {
                 decoration: BoxDecoration(
                   gradient: AppTheme.heroGradient,
                   borderRadius: BorderRadius.circular(AppRadius.lg),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(
+                        alpha: 0.4,
+                      ),
+                      blurRadius: 24,
+                      offset: const Offset(0, 14),
+                    ),
+                  ],
                 ),
                 child: Column(
                   children: [
                     Container(
-                      width: 88,
-                      height: 88,
+                      width: 96,
+                      height: 96,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.2),
+                        color: Colors.white.withValues(alpha: 0.22),
                         shape: BoxShape.circle,
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.5),
-                          width: 2,
+                          width: 2.5,
                         ),
                       ),
                       alignment: Alignment.center,
@@ -76,8 +86,9 @@ class ProfilePage extends StatelessWidget {
                         initials,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 36,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.0,
                         ),
                       ),
                     ),
@@ -87,29 +98,51 @@ class ProfilePage extends StatelessWidget {
                       textAlign: TextAlign.center,
                       style: theme.textTheme.headlineSmall?.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
                       ),
                     ),
                     if (p.email.isNotEmpty) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        p.email,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: Colors.white.withValues(alpha: 0.85),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.alternate_email_rounded,
+                              size: 12,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              p.email,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.2,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // ── Account / username ──────────────────────────────────
-              _SectionTitle(
-                l10n.authLoginSubtitle,
-              ), // Using a more relevant l10n key if available
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(
+                title: 'ACCOUNT',
+                icon: Icons.account_circle_outlined,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
@@ -127,20 +160,20 @@ class ProfilePage extends StatelessWidget {
                       label: l10n.authUsername,
                       value: username.isEmpty ? '—' : '@$username',
                     ),
-                    const SizedBox(height: AppSpacing.sm),
+                    const SizedBox(height: AppSpacing.md),
                     _AccountRow(
-                      label:
-                          'Member since', // No l10n found for this specific string, kept for now
+                      label: 'Member since',
                       value: _formatDate(user?.createdAt),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // ── Personal details (editable) ─────────────────────────
-              _SectionTitle('Personal details'),
-              const SizedBox(height: AppSpacing.sm),
+              const SizedBox(height: AppSpacing.xl),
+              const AppSectionHeader(
+                title: 'PERSONAL DETAILS',
+                icon: Icons.tune_rounded,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _EditableRow(
                 label: l10n.authDisplayName,
                 initialValue: p.name,
@@ -150,7 +183,6 @@ class ProfilePage extends StatelessWidget {
                   if (t.isNotEmpty) await profileService.updateName(t);
                 },
               ),
-              const SizedBox(height: AppSpacing.md),
               _EditableRow(
                 label: l10n.authEmail,
                 initialValue: p.email,
@@ -161,9 +193,7 @@ class ProfilePage extends StatelessWidget {
                   if (t.isNotEmpty) await profileService.updateEmail(t);
                 },
               ),
-              const SizedBox(height: AppSpacing.lg),
-
-              // ── Log out ─────────────────────────────────────────────
+              const SizedBox(height: AppSpacing.xl),
               _LogoutButton(
                 onTap: () => _confirmLogout(context, authService, l10n),
               ),
@@ -210,7 +240,33 @@ class ProfilePage extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(l10n.authLogoutConfirm),
+        title: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.error.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.logout_rounded,
+                color: theme.colorScheme.error,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(
+                l10n.authLogoutConfirm,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ],
+        ),
         content: Text(l10n.authLogoutConfirmBody),
         actions: [
           TextButton(
@@ -236,23 +292,6 @@ class ProfilePage extends StatelessWidget {
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Text(
-      text,
-      style: theme.textTheme.titleSmall?.copyWith(
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0.2,
-      ),
-    );
-  }
-}
-
 class _AccountRow extends StatelessWidget {
   const _AccountRow({required this.label, required this.value});
   final String label;
@@ -264,20 +303,23 @@ class _AccountRow extends StatelessWidget {
     return Row(
       children: [
         SizedBox(
-          width: 120,
+          width: 140,
           child: Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
+            label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              fontSize: 11,
             ),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w700,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
             ),
           ),
         ),
@@ -360,6 +402,13 @@ class _EditableRowState extends State<_EditableRow> {
             decoration: const BoxDecoration(
               gradient: AppTheme.heroGradient,
               borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
+              boxShadow: [
+                BoxShadow(
+                  color: Color(0x406366F1),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
             ),
             alignment: Alignment.center,
             child: Icon(widget.icon, color: Colors.white, size: 20),
@@ -371,10 +420,12 @@ class _EditableRowState extends State<_EditableRow> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  widget.label,
+                  widget.label.toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.8,
+                    fontSize: 10,
                   ),
                 ),
                 TextField(
@@ -384,10 +435,12 @@ class _EditableRowState extends State<_EditableRow> {
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding: EdgeInsets.symmetric(vertical: 2),
-                    filled:
-                        false, // Override theme filled background for inline field
+                    filled: false,
                   ),
-                  style: theme.textTheme.bodyLarge,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
                 ),
               ],
             ),
@@ -395,11 +448,14 @@ class _EditableRowState extends State<_EditableRow> {
           const SizedBox(width: AppSpacing.sm),
           FilledButton.tonal(
             style: FilledButton.styleFrom(
-              minimumSize: const Size(64, 36),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              minimumSize: const Size(72, 38),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
             ),
             onPressed: _dirty ? _save : null,
-            child: const Text('Save'),
+            child: const Text('SAVE'),
           ),
         ],
       ),
@@ -425,6 +481,7 @@ class _LogoutButton extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border.all(
               color: theme.colorScheme.error.withValues(alpha: 0.4),
+              width: 1.2,
             ),
           ),
           child: Row(
@@ -435,6 +492,13 @@ class _LogoutButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: theme.colorScheme.error,
                   borderRadius: BorderRadius.circular(AppRadius.sm),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.error.withValues(alpha: 0.4),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 alignment: Alignment.center,
                 child: const Icon(
@@ -449,10 +513,12 @@ class _LogoutButton extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Log out',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                      'LOG OUT',
+                      style: theme.textTheme.labelSmall?.copyWith(
                         color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.4,
+                        fontSize: 11,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -460,6 +526,7 @@ class _LogoutButton extends StatelessWidget {
                       'Sign out of this account on this device',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

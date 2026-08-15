@@ -5,6 +5,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/error/failure.dart';
 import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
+import '../../../workout/domain/entities/workout.dart';
+import '../../../workout/domain/usecases/watch_workouts.dart';
 import '../../domain/entities/session.dart';
 import '../../domain/usecases/create_session.dart';
 import '../../domain/usecases/delete_session.dart';
@@ -27,15 +29,18 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     required CreateSession createSession,
     required UpdateSession updateSession,
     required DeleteSession deleteSession,
+    required WatchAllWorkouts watchAllWorkouts,
   }) : _getSessions = getSessions,
        _watchSessions = watchSessions,
        _getSessionById = getSessionById,
        _createSession = createSession,
        _updateSession = updateSession,
        _deleteSession = deleteSession,
+       _watchAllWorkouts = watchAllWorkouts,
        super(const SessionInitial()) {
     on<WatchSessionsEvent>(_onWatch);
     on<SessionsReceived>(_onReceived);
+    on<WorkoutCountsReceived>(_onWorkoutCountsReceived);
     on<LoadSessionsEvent>(_onLoad);
     on<GetSessionByIdEvent>(_onGetById);
     on<SessionReceived>(_onSessionReceived);
@@ -52,8 +57,12 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final CreateSession _createSession;
   final UpdateSession _updateSession;
   final DeleteSession _deleteSession;
+  final WatchAllWorkouts _watchAllWorkouts;
 
   StreamSubscription<Either<Failure, List<Session>>>? _subscription;
+  StreamSubscription<Either<Failure, List<Workout>>>? _workoutsSubscription;
+
+  Map<int, int> _workoutCountsBySessionId = const {};
 
   Future<void> _onWatch(
     WatchSessionsEvent event,
@@ -71,15 +80,72 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
         add(SessionsReceived(const <Session>[]));
       },
     );
+    await _workoutsSubscription?.cancel();
+    _workoutsSubscription = _watchAllWorkouts(const NoParams()).listen(
+      (result) {
+        if (isClosed) return;
+        add(WorkoutCountsReceived(result.getOrElse((_) => const [])));
+      },
+      onError: (Object error) {
+        if (isClosed) return;
+        add(WorkoutCountsReceived(const <Workout>[]));
+      },
+    );
   }
 
   void _onReceived(SessionsReceived event, Emitter<SessionState> emit) {
     final current = state;
+    final sessions = _applyCounts(event.sessions);
     if (current is SessionLoaded) {
-      emit(current.copyWith(sessions: event.sessions));
+      emit(current.copyWith(sessions: sessions));
     } else {
-      emit(SessionLoaded(sessions: event.sessions));
+      emit(SessionLoaded(sessions: sessions));
     }
+  }
+
+  void _onWorkoutCountsReceived(
+    WorkoutCountsReceived event,
+    Emitter<SessionState> emit,
+  ) {
+    final counts = <int, int>{};
+    for (final w in event.workouts) {
+      counts.update(w.sessionId, (n) => n + 1, ifAbsent: () => 1);
+    }
+    if (_mapsEqual(counts, _workoutCountsBySessionId)) return;
+    _workoutCountsBySessionId = counts;
+    final current = state;
+    if (current is SessionLoaded) {
+      emit(current.copyWith(sessions: _applyCounts(current.sessions)));
+    }
+  }
+
+  /// Returns a list where only sessions whose `workoutCount` differs
+  /// from the cached counts are replaced. When no count changed, the
+  /// returned list is reference-equal to [source], so `Equatable`
+  /// short-circuits and downstream `BlocBuilder`s skip rebuilding.
+  List<Session> _applyCounts(List<Session> source) {
+    final counts = _workoutCountsBySessionId;
+    var changed = false;
+    final patched = <Session>[];
+    for (final s in source) {
+      final next = counts[s.id] ?? 0;
+      if (s.workoutCount != next) {
+        patched.add(s.copyWith(workoutCount: next));
+        changed = true;
+      } else {
+        patched.add(s);
+      }
+    }
+    return changed ? patched : source;
+  }
+
+  bool _mapsEqual(Map<int, int> a, Map<int, int> b) {
+    if (identical(a, b)) return true;
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (b[entry.key] != entry.value) return false;
+    }
+    return true;
   }
 
   Future<void> _onLoad(
@@ -90,7 +156,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     final result = await _getSessions(const NoParams());
     result.fold(
       (failure) => emit(SessionError(failure)),
-      (sessions) => emit(SessionLoaded(sessions: sessions)),
+      (sessions) => emit(SessionLoaded(sessions: _applyCounts(sessions))),
     );
   }
 
@@ -188,6 +254,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   @override
   Future<void> close() async {
     await _subscription?.cancel();
+    await _workoutsSubscription?.cancel();
     return super.close();
   }
 }

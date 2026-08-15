@@ -76,6 +76,7 @@ class AppNavigationRail extends StatelessWidget {
       (d) => currentRoute.startsWith(d.route),
     );
     final extended = MediaQuery.sizeOf(context).width >= 1100;
+    final theme = Theme.of(context);
 
     return NavigationRail(
       extended: extended,
@@ -86,13 +87,15 @@ class AppNavigationRail extends StatelessWidget {
       onDestinationSelected: (index) {
         context.go(destinations[index].route);
       },
+      backgroundColor: theme.colorScheme.surface,
+      indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
       leading: Column(
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               margin: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
               decoration: const BoxDecoration(
                 gradient: AppTheme.heroGradient,
@@ -100,17 +103,20 @@ class AppNavigationRail extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: Color(0x406366F1),
-                    blurRadius: 10,
+                    blurRadius: 14,
                     offset: Offset(0, 6),
                   ),
                 ],
               ),
+              alignment: Alignment.center,
               child: const Icon(
                 Icons.fitness_center_rounded,
                 color: Colors.white,
+                size: 22,
               ),
             ),
           ),
+          const SizedBox(height: AppSpacing.xs),
           IconButton(
             icon: const Icon(Icons.person_outline_rounded),
             onPressed: () => context.pushNamed(RouteNames.profile),

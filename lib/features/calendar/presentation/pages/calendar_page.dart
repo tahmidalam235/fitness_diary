@@ -7,6 +7,7 @@ import '../../../../core/di/injection.dart';
 import '../../../../core/routes/route_paths.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
@@ -103,16 +104,21 @@ class _CalendarPageState extends State<CalendarPage> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _MonthYearBar(
-                    label: DateFormat.yMMMM(
-                      l10n.localeName,
-                    ).format(_visibleMonth),
+                  _CalendarHero(
+                    month: _visibleMonth,
+                    workoutsThisMonth: state.workoutsByDay.entries
+                        .where(
+                          (e) =>
+                              e.key.year == _visibleMonth.year &&
+                              e.key.month == _visibleMonth.month,
+                        )
+                        .fold<int>(0, (sum, e) => sum + e.value),
                     onTap: _pickMonth,
                   ),
                   Padding(
                     padding: const EdgeInsets.fromLTRB(
                       AppSpacing.lg,
-                      0,
+                      AppSpacing.sm,
                       AppSpacing.lg,
                       AppSpacing.xs,
                     ),
@@ -143,61 +149,213 @@ class _CalendarPageState extends State<CalendarPage> {
   }
 }
 
-/// Sticky tappable bar showing the currently visible month. Built
-/// from AppScaffold's body so it sits above the month grid.
-class _MonthYearBar extends StatelessWidget {
-  const _MonthYearBar({required this.label, required this.onTap});
+/// Compact hero header for the calendar page — month label, year,
+/// workouts-this-month chip and the picker trigger.
+class _CalendarHero extends StatelessWidget {
+  const _CalendarHero({
+    required this.month,
+    required this.workoutsThisMonth,
+    required this.onTap,
+  });
 
-  final String label;
+  final DateTime month;
+  final int workoutsThisMonth;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
-        AppSpacing.sm,
         AppSpacing.lg,
-        AppSpacing.xs,
+        AppSpacing.lg,
+        AppSpacing.sm,
       ),
       child: Material(
-        color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.pill),
+        color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppRadius.pill),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              gradient: AppTheme.heroGradient,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                  blurRadius: 22,
+                  offset: const Offset(0, 12),
+                ),
+              ],
             ),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  Icons.calendar_month_rounded,
-                  size: 18,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.22),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.4),
+                          width: 1.5,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.calendar_month_rounded,
+                        color: Colors.white,
+                        size: 28,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            l10n.calendarTitle.toUpperCase(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: Colors.white.withValues(alpha: 0.92),
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.4,
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            DateFormat.yMMMM(l10n.localeName).format(month),
+                            style: theme.textTheme.headlineMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.6,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: AppSpacing.xs,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.expand_more_rounded,
+                            size: 16,
+                            color: theme.colorScheme.primary,
+                          ),
+                          const SizedBox(width: 2),
+                          Text(
+                            'PICK',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.expand_more_rounded,
-                  color: theme.colorScheme.onSurfaceVariant,
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _HeroMetric(
+                        icon: Icons.bolt_rounded,
+                        value: '$workoutsThisMonth',
+                        label: 'WORKOUTS',
+                      ),
+                    ),
+                    const SizedBox(width: AppSpacing.sm),
+                    Expanded(
+                      child: _HeroMetric(
+                        icon: Icons.event_available_rounded,
+                        value:
+                            '${workoutsThisMonth == 0 ? 0 : (workoutsThisMonth / 30 * 7).round()}',
+                        label: 'THIS WEEK',
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _HeroMetric extends StatelessWidget {
+  const _HeroMetric({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.25),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: Colors.white.withValues(alpha: 0.85)),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: Colors.white.withValues(alpha: 0.92),
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.8,
+              fontSize: 9,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -215,7 +373,7 @@ class _LegendChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.sm,
-          vertical: AppSpacing.xxs,
+          vertical: AppSpacing.xs,
         ),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerHighest,
@@ -225,10 +383,10 @@ class _LegendChip extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary,
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                gradient: AppTheme.heroGradient,
                 shape: BoxShape.circle,
               ),
             ),
@@ -237,6 +395,9 @@ class _LegendChip extends StatelessWidget {
               label,
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+                fontSize: 11,
               ),
             ),
           ],

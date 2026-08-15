@@ -13,10 +13,15 @@ import 'package:fitness_diary/features/session/domain/usecases/watch_sessions.da
 import 'package:fitness_diary/features/session/presentation/bloc/session_bloc.dart';
 import 'package:fitness_diary/features/session/presentation/bloc/session_event.dart';
 import 'package:fitness_diary/features/session/presentation/bloc/session_state.dart';
+import 'package:fitness_diary/features/workout/domain/entities/workout.dart';
+import 'package:fitness_diary/features/workout/domain/repositories/workout_repository.dart';
+import 'package:fitness_diary/features/workout/domain/usecases/watch_workouts.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockSessionRepository extends Mock implements SessionRepository {}
+
+class _MockWorkoutRepository extends Mock implements WorkoutRepository {}
 
 class _FakeCreateSessionParams extends Fake implements CreateSessionParams {}
 
@@ -25,6 +30,7 @@ class _FakeUpdateSessionParams extends Fake implements UpdateSessionParams {}
 void main() {
   late SessionBloc bloc;
   late _MockSessionRepository repository;
+  late _MockWorkoutRepository workoutRepository;
 
   setUpAll(() {
     registerFallbackValue(_FakeCreateSessionParams());
@@ -34,6 +40,10 @@ void main() {
 
   setUp(() {
     repository = _MockSessionRepository();
+    workoutRepository = _MockWorkoutRepository();
+    when(() => workoutRepository.watchAllWorkouts()).thenAnswer(
+      (_) => const Stream<Either<Failure, List<Workout>>>.empty(),
+    );
     bloc = SessionBloc(
       getSessions: GetSessions(repository: repository),
       watchSessions: WatchSessions(repository: repository),
@@ -41,6 +51,7 @@ void main() {
       createSession: CreateSession(repository: repository),
       updateSession: UpdateSession(repository: repository),
       deleteSession: DeleteSession(repository: repository),
+      watchAllWorkouts: WatchAllWorkouts(repository: workoutRepository),
     );
   });
 

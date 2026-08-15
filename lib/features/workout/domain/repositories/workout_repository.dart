@@ -8,6 +8,10 @@ abstract class WorkoutRepository {
   /// Streams workouts attached to [sessionId] ordered by position.
   Stream<Either<Failure, List<Workout>>> watchWorkoutsForSession(int sessionId);
 
+  /// Streams every session_workouts row across all sessions. Used by
+  /// the Sessions list to derive per-session workout counts.
+  Stream<Either<Failure, List<Workout>>> watchAllWorkouts();
+
   /// Creates a new master workout + session_workouts link.
   ///
   /// Returns the resulting [Workout] (with assigned id + position).

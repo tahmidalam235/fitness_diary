@@ -15,12 +15,13 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
+import '../../../../shared/widgets/app_workout_card.dart';
 import '../../../../shared/widgets/confirm_dialog.dart';
 import 'package:fitness_diary/features/today/presentation/bloc/today_workouts_bloc.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout/data/datasources/workout_local_datasource.dart';
 import '../../../workout/presentation/bloc/workout_list_bloc.dart';
-import '../../../workout/presentation/widgets/workout_card.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
 import '../../../workout_log/domain/usecases/add_workouts_to_today.dart';
 import '../../../workout_log/domain/usecases/get_last_entries_for_workouts.dart';
@@ -333,6 +334,7 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
               description: session.description,
               createdAt: session.createdAt,
               updatedAt: session.updatedAt,
+              workoutCount: session.workoutCount,
               theme: theme,
               l10n: l10n,
               dateFormat: dateFormat,
@@ -350,6 +352,7 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
     required String description,
     required DateTime createdAt,
     required DateTime updatedAt,
+    required int? workoutCount,
     required ThemeData theme,
     required AppLocalizations l10n,
     required DateFormat dateFormat,
@@ -364,56 +367,14 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
             AppSpacing.sm,
           ),
           sliver: SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              decoration: BoxDecoration(
-                gradient: AppTheme.heroGradient,
-                borderRadius: BorderRadius.circular(AppRadius.lg),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 18,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    sessionName,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                  if (description.isNotEmpty) ...[
-                    const Gap(AppSpacing.xs),
-                    Text(
-                      description,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        height: 1.4,
-                      ),
-                    ),
-                  ],
-                  const Gap(AppSpacing.sm),
-                  Text(
-                    l10n.sessionDetailsCreatedAt(dateFormat.format(createdAt)),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                  const Gap(AppSpacing.xxs),
-                  Text(
-                    l10n.sessionDetailsUpdatedAt(dateFormat.format(updatedAt)),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.85),
-                    ),
-                  ),
-                ],
-              ),
+            child: _SessionHero(
+              sessionName: sessionName,
+              description: description,
+              createdAt: createdAt,
+              updatedAt: updatedAt,
+              workoutCount: workoutCount ?? 0,
+              dateFormat: dateFormat,
+              l10n: l10n,
             ),
           ),
         ),
@@ -514,6 +475,202 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
   }
 }
 
+/// Premium hero header for the session details page — gradient
+/// background, big session name, description, dates and a workout
+/// count stat tile.
+class _SessionHero extends StatelessWidget {
+  const _SessionHero({
+    required this.sessionName,
+    required this.description,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.workoutCount,
+    required this.dateFormat,
+    required this.l10n,
+  });
+
+  final String sessionName;
+  final String description;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int workoutCount;
+  final DateFormat dateFormat;
+  final AppLocalizations l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: AppTheme.heroGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  sessionName.isEmpty ? '?' : sessionName[0].toUpperCase(),
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      sessionName,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (workoutCount > 0) ...[
+                      const SizedBox(height: 2),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.fitness_center_rounded,
+                              size: 12,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$workoutCount workout${workoutCount == 1 ? '' : 's'}',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10,
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (description.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              description,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: Colors.white.withValues(alpha: 0.92),
+                fontWeight: FontWeight.w500,
+                height: 1.45,
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroMeta(
+                  icon: Icons.event_rounded,
+                  label: l10n.sessionDetailsCreatedAt(dateFormat.format(createdAt)),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: _HeroMeta(
+                  icon: Icons.update_rounded,
+                  label: l10n.sessionDetailsUpdatedAt(dateFormat.format(updatedAt)),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeroMeta extends StatelessWidget {
+  const _HeroMeta({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.28),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white, size: 14),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 10,
+                letterSpacing: 0.2,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WorkoutListSection extends StatelessWidget {
   const _WorkoutListSection({
     required this.workouts,
@@ -562,15 +719,32 @@ class _WorkoutListSection extends StatelessWidget {
               vertical: AppSpacing.sm,
             ),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+              gradient: LinearGradient(
+                colors: [
+                  theme.colorScheme.primary.withValues(alpha: 0.18),
+                  theme.colorScheme.primary.withValues(alpha: 0.06),
+                ],
+              ),
               borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.35),
+              ),
             ),
             child: Row(
               children: [
-                Icon(
-                  Icons.checklist_rounded,
-                  size: 18,
-                  color: theme.colorScheme.onPrimaryContainer,
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  ),
+                  alignment: Alignment.center,
+                  child: Icon(
+                    Icons.checklist_rounded,
+                    size: 16,
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
                 const Gap(AppSpacing.xs),
                 Expanded(
@@ -579,8 +753,8 @@ class _WorkoutListSection extends StatelessWidget {
                         ? 'Tap the boxes to pick workouts for today'
                         : '${selectedMasterWorkoutIds.length} selected — tap "Add for Today\'s Session" below',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onPrimaryContainer,
-                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -589,7 +763,16 @@ class _WorkoutListSection extends StatelessWidget {
           ),
           const Gap(AppSpacing.sm),
         ] else
-          const Gap(AppSpacing.sm),
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.sm,
+            ),
+            child: AppSectionHeader(
+              title: 'WORKOUTS',
+              icon: Icons.fitness_center_rounded,
+            ),
+          ),
         ReorderableListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -610,8 +793,10 @@ class _WorkoutListSection extends StatelessWidget {
             return Padding(
               key: ValueKey<int>(w.id),
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: WorkoutCard(
+              child: AppWorkoutCard(
                 workout: w,
+                position: w.position,
+                completed: isTracked,
                 // Big, tappable checkbox appears only in select mode.
                 leading: selectMode
                     ? Padding(
@@ -634,7 +819,7 @@ class _WorkoutListSection extends StatelessWidget {
                 onTap: selectMode
                     ? (isTracked ? () {} : () => onToggleSelection(w.workoutId))
                     : () => context.pushNamed(
-                        RouteNames.workoutTracking,
+                        RouteNames.workoutEdit,
                         pathParameters: {
                           'id': sessionId.toString(),
                           'workoutId': w.id.toString(),
@@ -647,16 +832,18 @@ class _WorkoutListSection extends StatelessWidget {
                 // navigation to the edit page in both modes so the
                 // user can manage a workout from the Today flow
                 // without first having to back out of select mode.
-                onEdit: () => context.pushNamed(
-                  RouteNames.workoutEdit,
-                  pathParameters: {
-                    'id': sessionId.toString(),
-                    'workoutId': w.id.toString(),
-                  },
+                trailing: _SessionWorkoutTrailing(
+                  onEdit: () => context.pushNamed(
+                    RouteNames.workoutEdit,
+                    pathParameters: {
+                      'id': sessionId.toString(),
+                      'workoutId': w.id.toString(),
+                    },
+                  ),
+                  onDelete: selectMode
+                      ? null
+                      : () => _confirmDelete(context, w.id, w.exerciseName),
                 ),
-                onDelete: selectMode
-                    ? () {}
-                    : () => _confirmDelete(context, w.id, w.exerciseName),
                 // Hide the drag handle in select mode so the checkbox has
                 // room and reorder isn't accidentally triggered.
                 dragHandle: selectMode
@@ -688,3 +875,85 @@ class _WorkoutListSection extends StatelessWidget {
     }
   }
 }
+
+/// Trailing widget for a workout card in the session details page —
+/// a compact 3-dot menu with Edit / Delete actions.
+class _SessionWorkoutTrailing extends StatelessWidget {
+  const _SessionWorkoutTrailing({required this.onEdit, this.onDelete});
+
+  final VoidCallback onEdit;
+  final VoidCallback? onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return PopupMenuButton<_SessionWorkoutAction>(
+      icon: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        alignment: Alignment.center,
+        child: Icon(
+          Icons.more_vert_rounded,
+          size: 18,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      onSelected: (action) {
+        switch (action) {
+          case _SessionWorkoutAction.edit:
+            onEdit();
+            break;
+          case _SessionWorkoutAction.delete:
+            onDelete?.call();
+            break;
+        }
+      },
+      itemBuilder: (_) => [
+        PopupMenuItem(
+          value: _SessionWorkoutAction.edit,
+          child: Row(
+            children: [
+              Icon(
+                Icons.edit_rounded,
+                size: 18,
+                color: theme.colorScheme.primary,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Text('Edit', style: TextStyle(fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+        if (onDelete != null)
+          PopupMenuItem(
+            value: _SessionWorkoutAction.delete,
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline_rounded,
+                  size: 18,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Text(
+                  'Delete',
+                  style: TextStyle(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+enum _SessionWorkoutAction { edit, delete }

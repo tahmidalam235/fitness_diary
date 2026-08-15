@@ -5,6 +5,7 @@ import '../../core/di/injection.dart';
 import '../../core/routes/route_paths.dart';
 import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/usecase/no_params.dart';
 import '../../features/history/domain/usecases/set_day_frozen.dart';
 import '../../features/history/domain/usecases/watch_frozen_days.dart';
@@ -18,6 +19,7 @@ class AppOverflowMenu extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final watchFrozen = getIt<WatchFrozenDays>();
     final setFrozen = getIt<SetDayFrozen>();
+    final theme = Theme.of(context);
 
     return StreamBuilder<Set<DateTime>>(
       stream: watchFrozen(
@@ -30,12 +32,21 @@ class AppOverflowMenu extends StatelessWidget {
         final isTodayFrozen = frozen.contains(today);
 
         return PopupMenuButton<void>(
-          icon: const Icon(Icons.more_vert_rounded),
+          icon: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.more_horiz_rounded),
+          ),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.md),
           ),
           position: PopupMenuPosition.under,
-          constraints: const BoxConstraints(minWidth: 220),
+          constraints: const BoxConstraints(minWidth: 240),
           itemBuilder: (context) => [
             // Freeze Today Toggle
             PopupMenuItem<void>(
@@ -51,19 +62,29 @@ class AppOverflowMenu extends StatelessWidget {
                         ? Icons.ac_unit_rounded
                         : Icons.ac_unit_outlined,
                     size: 20,
-                    color: isTodayFrozen ? const Color(0xFF60A5FA) : null,
+                    color: isTodayFrozen ? AppTheme.frostBlue : null,
                   ),
                   const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Text(
                       isTodayFrozen ? 'Unfreeze Today' : 'Freeze Today',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
                   ),
                   if (isTodayFrozen)
-                    const Icon(
-                      Icons.check_circle_rounded,
-                      size: 14,
-                      color: Colors.green,
+                    Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        gradient: AppTheme.freshGradient,
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: 12,
+                      ),
                     ),
                 ],
               ),
@@ -74,7 +95,10 @@ class AppOverflowMenu extends StatelessWidget {
                 children: [
                   const Icon(Icons.calendar_today_outlined, size: 20),
                   const SizedBox(width: AppSpacing.md),
-                  const Text('Manage Freezes'),
+                  const Text(
+                    'Manage Freezes',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -96,13 +120,27 @@ class AppOverflowMenu extends StatelessWidget {
               },
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.compare_arrows_rounded,
-                    size: 20,
-                    color: Colors.blueAccent,
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                      ),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.compare_arrows_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Text('Compare Progress'),
+                  const Text(
+                    'Compare Progress',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -110,13 +148,25 @@ class AppOverflowMenu extends StatelessWidget {
               onTap: () => context.pushNamed(RouteNames.historyOverview),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.insights_rounded,
-                    size: 20,
-                    color: Colors.deepPurpleAccent,
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.victoryGradient,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.insights_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: AppSpacing.md),
-                  const Text('Progress Overview'),
+                  const Text(
+                    'Progress Overview',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),
@@ -129,7 +179,10 @@ class AppOverflowMenu extends StatelessWidget {
                 children: [
                   const Icon(Icons.settings_outlined, size: 20),
                   const SizedBox(width: AppSpacing.md),
-                  Text(l10n.navSettings),
+                  Text(
+                    l10n.navSettings,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ],
               ),
             ),

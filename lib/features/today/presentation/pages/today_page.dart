@@ -11,6 +11,7 @@ import '../../../../core/error/failure.dart';
 import '../../../../core/routes/route_paths.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../features/history/domain/usecases/watch_frozen_days.dart';
@@ -19,11 +20,12 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
+import '../../../../shared/widgets/app_workout_card.dart';
 import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
 import '../../../session/presentation/bloc/session_state.dart';
-import '../../../workout/domain/entities/body_part.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
@@ -107,7 +109,9 @@ class _TodayPageState extends State<TodayPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-    final dayName = DateFormat('EEEE').format(DateTime.now());
+    final now = DateTime.now();
+    final dayName = DateFormat('EEEE').format(now);
+    final dateLabel = DateFormat('MMMM d').format(now);
 
     return BlocProvider<SessionBloc>(
       create: (_) {
@@ -149,29 +153,30 @@ class _TodayPageState extends State<TodayPage> {
                 if (_isTodayFrozen) const _FrozenBanner(),
                 Expanded(
                   child: ListView(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: AppSpacing.lg,
-                    ),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.xxl),
                     children: [
                       Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
+                        padding: const EdgeInsets.fromLTRB(
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.lg,
+                          AppSpacing.sm,
                         ),
-                        child: Text(
-                          dayName,
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
+                        child: _TodayHero(
+                          dayName: dayName,
+                          dateLabel: dateLabel,
+                          sessionCount: _todayLogs.length,
+                          gradient: AppTheme.heroGradient,
                         ),
-                      ),
-                      const Divider(
-                        indent: AppSpacing.lg,
-                        endIndent: AppSpacing.lg,
                       ),
                       if (_todayLogs.isEmpty)
                         Padding(
-                          padding: const EdgeInsets.all(AppSpacing.xl),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.lg,
+                            AppSpacing.xl,
+                            AppSpacing.lg,
+                            AppSpacing.xl,
+                          ),
                           child: AppEmptyState(
                             title: l10n.todayEmptyTitle,
                             message: l10n.todayEmptyMessage,
@@ -210,7 +215,12 @@ class _TodayPageState extends State<TodayPage> {
                               // No joinable logs yet — surface the empty
                               // state CTA rather than blank sections.
                               return Padding(
-                                padding: const EdgeInsets.all(AppSpacing.xl),
+                                padding: const EdgeInsets.fromLTRB(
+                                  AppSpacing.lg,
+                                  AppSpacing.xl,
+                                  AppSpacing.lg,
+                                  AppSpacing.xl,
+                                ),
                                 child: AppEmptyState(
                                   title: l10n.todayEmptyTitle,
                                   message: l10n.todayEmptyMessage,
@@ -250,7 +260,7 @@ class _TodayPageState extends State<TodayPage> {
                             );
                           },
                         ),
-                      const Gap(AppSpacing.xl),
+                      const Gap(AppSpacing.md),
                       Padding(
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.lg,
@@ -265,9 +275,17 @@ class _TodayPageState extends State<TodayPage> {
                                 : 'Add More Session for Today',
                           ),
                           style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.all(AppSpacing.md),
+                            padding: const EdgeInsets.symmetric(
+                              vertical: AppSpacing.md,
+                            ),
+                            side: BorderSide(
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.5),
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppRadius.md),
+                              borderRadius: BorderRadius.circular(
+                                AppRadius.md,
+                              ),
                             ),
                           ),
                         ),
@@ -279,6 +297,126 @@ class _TodayPageState extends State<TodayPage> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Big hero header for the Today page: weekday + date + session count
+/// chip rendered inside the hero gradient.
+class _TodayHero extends StatelessWidget {
+  const _TodayHero({
+    required this.dayName,
+    required this.dateLabel,
+    required this.sessionCount,
+    required this.gradient,
+  });
+
+  final String dayName;
+  final String dateLabel;
+  final int sessionCount;
+  final Gradient gradient;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.35),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  'TODAY',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2.0,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (sessionCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.bolt_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$sessionCount session${sessionCount == 1 ? '' : 's'}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            dayName,
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -1.2,
+              height: 1.0,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            dateLabel,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.92),
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -332,14 +470,12 @@ class _SessionSection extends StatelessWidget {
                     AppSpacing.lg,
                     AppSpacing.sm,
                   ),
-                  child: Text(
-                    title,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: session == null
-                          ? theme.colorScheme.outline
-                          : theme.colorScheme.primary,
-                    ),
+                  child: AppSectionHeader(
+                    title: title,
+                    icon: Icons.fitness_center_rounded,
+                    accent: session == null
+                        ? theme.colorScheme.outline
+                        : theme.colorScheme.primary,
                   ),
                 ),
                 _TodayWorkoutsList(
@@ -408,202 +544,20 @@ class _TodayWorkoutsList extends StatelessWidget {
           for (final workout in workoutsToShow)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: _TodayWorkoutCard(
+              child: AppWorkoutCard(
                 workout: workout,
                 entry: entryMap[workout.workoutId],
-                sessionId: sessionId,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _TodayWorkoutCard extends StatelessWidget {
-  const _TodayWorkoutCard({
-    required this.workout,
-    this.entry,
-    required this.sessionId,
-  });
-
-  final Workout workout;
-  final WorkoutLogEntry? entry;
-  final int sessionId;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    // Use entry values (today's progress) if they exist,
-    // otherwise fallback to template defaults.
-    final sets = entry?.sets ?? workout.defaultSets;
-    final reps = entry?.reps ?? workout.defaultReps;
-    final weight = entry?.weight ?? workout.defaultWeight;
-    final duration = entry?.durationSeconds ?? workout.defaultDurationSeconds;
-    final notes = (entry?.notes.isNotEmpty ?? false)
-        ? entry!.notes
-        : workout.notes;
-
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        side: BorderSide(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
-        ),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        onTap: () => context.pushNamed(
-          RouteNames.workoutTracking,
-          pathParameters: {
-            'id': sessionId.toString(),
-            'workoutId': workout.id.toString(),
-          },
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    entry != null ? Icons.check_circle_rounded : Icons.circle,
-                    size: 8,
-                    color: entry != null
-                        ? theme.colorScheme.primary
-                        : Colors.grey,
-                  ),
-                  const Gap(AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      workout.exerciseName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: entry != null ? theme.colorScheme.primary : null,
-                      ),
-                    ),
-                  ),
-                  if (entry != null)
-                    Icon(
-                      Icons.edit_note_rounded,
-                      size: 18,
-                      color: theme.colorScheme.primary,
-                    ),
-                ],
-              ),
-              if (workout.targetedBodyPart != null) ...[
-                const Gap(AppSpacing.xs),
-                _BodyPartBadge(part: workout.targetedBodyPart!),
-              ],
-              const Gap(AppSpacing.sm),
-              Wrap(
-                spacing: AppSpacing.md,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  _WorkoutDetailItem(label: 'Sets', value: '$sets'),
-                  _WorkoutDetailItem(label: 'Reps', value: '$reps'),
-                  if (weight != null)
-                    _WorkoutDetailItem(
-                      label: 'Weight',
-                      value:
-                          '${weight == weight.toInt() ? weight.toInt() : weight} kg',
-                    ),
-                  if (duration != null)
-                    _WorkoutDetailItem(
-                      label: 'Duration',
-                      value: '${(duration / 60).round()}m',
-                    ),
-                ],
-              ),
-              if (notes.isNotEmpty) ...[
-                const Gap(AppSpacing.sm),
-                Text(
-                  notes,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                position: workout.position,
+                completed: entryMap[workout.workoutId] != null,
+                onTap: () => context.pushNamed(
+                  RouteNames.workoutTracking,
+                  pathParameters: {
+                    'id': sessionId.toString(),
+                    'workoutId': workout.id.toString(),
+                  },
                 ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WorkoutDetailItem extends StatelessWidget {
-  const _WorkoutDetailItem({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label.toUpperCase(),
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            fontSize: 9,
-            letterSpacing: 0.5,
-          ),
-        ),
-        Text(
-          value,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BodyPartBadge extends StatelessWidget {
-  const _BodyPartBadge({required this.part});
-
-  final BodyPart part;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm,
-        vertical: AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer.withValues(alpha: 0.45),
-        borderRadius: BorderRadius.circular(AppRadius.pill),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            part.icon,
-            size: 14,
-            color: theme.colorScheme.onPrimaryContainer,
-          ),
-          const Gap(AppSpacing.xs),
-          Text(
-            part.label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -622,22 +576,60 @@ class _FrozenBanner extends StatelessWidget {
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.sm,
       ),
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.5),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.frostBlue.withValues(alpha: 0.18),
+            AppTheme.accentCyan.withValues(alpha: 0.12),
+          ],
+        ),
+        border: Border(
+          bottom: BorderSide(
+            color: AppTheme.frostBlue.withValues(alpha: 0.4),
+            width: 1,
+          ),
+        ),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.ac_unit_rounded, size: 20, color: Color(0xFF60A5FA)),
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: AppTheme.frostBlue.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.ac_unit_rounded,
+              size: 18,
+              color: AppTheme.frostBlue,
+            ),
+          ),
           const Gap(AppSpacing.md),
           Expanded(
             child: Text(
-              'TODAY IS FROZEN. Your streak is protected even if you don\'t workout today.',
+              "TODAY IS FROZEN. Your streak is protected even if you don't workout today.",
               style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer,
+                color: theme.colorScheme.onSurface,
                 fontWeight: FontWeight.w700,
+                fontSize: 11,
+                letterSpacing: 0.4,
+                height: 1.35,
               ),
             ),
           ),
           TextButton(
             onPressed: () => context.pushNamed(RouteNames.freeze),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.xs,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+              ),
+            ),
             child: const Text('MANAGE'),
           ),
         ],
@@ -662,7 +654,6 @@ class _SessionPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
 
     if (sessions.isEmpty) {
       return AppEmptyState(
@@ -677,58 +668,36 @@ class _SessionPicker extends StatelessWidget {
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            itemCount: sessions.length,
-            separatorBuilder: (_, _) => const Gap(AppSpacing.sm),
-            itemBuilder: (context, index) {
-              final s = sessions[index];
-              return Card(
-                clipBehavior: Clip.antiAlias,
-                shape: RoundedRectangleBorder(
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final s in sessions) ...[
+            AppSessionCard(
+              title: s.name,
+              description: s.description.isEmpty ? null : s.description,
+              workoutCount: s.workoutCount,
+              onTap: () => onPick(s.id!),
+              trailing: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.heroGradient,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  side: BorderSide(color: theme.colorScheme.outlineVariant),
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.sm,
-                  ),
-                  leading: CircleAvatar(
-                    backgroundColor: theme.colorScheme.primaryContainer,
-                    child: Text(
-                      s.name.isEmpty ? '?' : s.name[0].toUpperCase(),
-                      style: TextStyle(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    s.name,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: s.description.isEmpty
-                      ? null
-                      : Text(
-                          s.description,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                  trailing: const Icon(Icons.add_rounded),
-                  onTap: () => onPick(s.id!),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.add_rounded,
+                  color: Colors.white,
+                  size: 22,
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+              ),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+          ],
+        ],
+      ),
     );
   }
 }

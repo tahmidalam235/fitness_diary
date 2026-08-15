@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routes/route_paths.dart';
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
+import '../../core/theme/app_theme.dart';
 import '../responsive/responsive_builder.dart';
 import '../responsive/screen_size.dart';
 import 'app_drawer.dart';
@@ -77,10 +79,11 @@ class AppScaffold extends StatelessWidget {
   /// page explicitly opts in via [showBackButton].
   Widget? _buildLeading(BuildContext context) {
     if (!context.canPop() && !showBackButton) return null;
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(left: 4),
       child: Material(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        color: theme.colorScheme.surfaceContainerHighest,
         shape: const CircleBorder(),
         child: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -131,13 +134,37 @@ class AppScaffold extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Image.asset(
-          'assets/logo/fitness_diary_compact.png',
-          height: 28,
-          fit: BoxFit.contain,
+        Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            gradient: AppTheme.heroGradient,
+            borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x406366F1),
+                blurRadius: 8,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          padding: const EdgeInsets.all(4),
+          child: Image.asset(
+            'assets/logo/fitness_diary_compact.png',
+            fit: BoxFit.contain,
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
-        Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+        Flexible(
+          child: Text(
+            title,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.3,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -222,7 +249,7 @@ class _ProfileActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.only(right: 4),
       child: IconButton(
         icon: const Icon(Icons.account_circle_outlined),
         onPressed: () => context.pushNamed(RouteNames.profile),
@@ -238,6 +265,7 @@ class _QuickActionsNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentPath = GoRouterState.of(context).uri.path;
+    final theme = Theme.of(context);
 
     // Map paths to tab index
     int selectedIndex = 0;
@@ -269,6 +297,25 @@ class _QuickActionsNavBar extends StatelessWidget {
             break;
         }
       },
+      backgroundColor: theme.colorScheme.surface,
+      indicatorColor: theme.colorScheme.primary.withValues(alpha: 0.14),
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      labelTextStyle: WidgetStateProperty.resolveWith((states) {
+        if (states.contains(WidgetState.selected)) {
+          return TextStyle(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
+            letterSpacing: 0.2,
+          );
+        }
+        return TextStyle(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w600,
+          fontSize: 11,
+        );
+      }),
       destinations: const [
         NavigationDestination(
           icon: Icon(Icons.play_circle_outline_rounded),

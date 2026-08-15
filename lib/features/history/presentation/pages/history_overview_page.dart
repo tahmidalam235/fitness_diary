@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gap/gap.dart';
 
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
@@ -35,13 +36,13 @@ class HistoryOverviewPage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
-              gradient: AppTheme.heroGradient,
+              gradient: AppTheme.victoryGradient,
               borderRadius: BorderRadius.circular(AppRadius.lg),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.35),
-                  blurRadius: 24,
-                  offset: const Offset(0, 10),
+                  color: const Color(0xFF84CC16).withValues(alpha: 0.45),
+                  blurRadius: 26,
+                  offset: const Offset(0, 14),
                 ),
               ],
             ),
@@ -53,6 +54,10 @@ class HistoryOverviewPage extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.22),
                     borderRadius: BorderRadius.circular(AppRadius.md),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
                   ),
                   alignment: Alignment.center,
                   child: const Icon(
@@ -61,24 +66,35 @@ class HistoryOverviewPage extends StatelessWidget {
                     size: 30,
                   ),
                 ),
-                const SizedBox(width: AppSpacing.md),
+                const Gap(AppSpacing.md),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Your progress',
+                        'YOUR PROGRESS',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.4,
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Monthly + Yearly',
                         style: theme.textTheme.headlineSmall?.copyWith(
                           color: Colors.white,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Monthly and yearly workout history at a glance.',
-                        style: theme.textTheme.bodyMedium?.copyWith(
+                        'Workout history at a glance',
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: Colors.white.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -92,33 +108,34 @@ class HistoryOverviewPage extends StatelessWidget {
           // sees the full breakdown immediately.
           const DrawerProgressSection(initiallyExpanded: true),
           const SizedBox(height: AppSpacing.lg),
-          Text(
-            l10n.historyPeriodEmpty,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
+          Container(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.tips_and_updates_outlined,
+                  size: 18,
+                  color: theme.colorScheme.primary,
+                ),
+                const Gap(AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    l10n.historyPeriodEmpty,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
-  }
-}
-
-/// Wraps [DrawerProgressSection] and forces it open on first build so
-/// the overview page shows the full breakdown by default.
-class _ForceExpandedProgress extends StatefulWidget {
-  const _ForceExpandedProgress();
-
-  @override
-  State<_ForceExpandedProgress> createState() => _ForceExpandedProgressState();
-}
-
-class _ForceExpandedProgressState extends State<_ForceExpandedProgress> {
-  @override
-  Widget build(BuildContext context) {
-    // Render the DrawerProgressSection with initiallyExpanded=true so
-    // the user lands on the full breakdown instead of having to tap.
-    return const DrawerProgressSection(initiallyExpanded: true);
   }
 }

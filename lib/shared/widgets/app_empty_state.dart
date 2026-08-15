@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gap/gap.dart';
 
+import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -14,6 +15,7 @@ class AppEmptyState extends StatelessWidget {
     this.icon = Icons.inbox_outlined,
     this.actionLabel,
     this.onAction,
+    this.gradient = AppTheme.heroGradient,
     super.key,
   });
 
@@ -22,6 +24,7 @@ class AppEmptyState extends StatelessWidget {
   final IconData icon;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final Gradient gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -33,12 +36,12 @@ class AppEmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _HeroIcon(icon: icon),
+            _HeroIcon(icon: icon, gradient: gradient),
             const Gap(AppSpacing.lg),
             Text(
               title,
               style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
               ),
               textAlign: TextAlign.center,
@@ -49,7 +52,7 @@ class AppEmptyState extends StatelessWidget {
                 message!,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
-                  height: 1.45,
+                  height: 1.5,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -59,7 +62,20 @@ class AppEmptyState extends StatelessWidget {
               FilledButton.icon(
                 onPressed: onAction,
                 icon: const Icon(Icons.add_rounded),
-                label: Text(actionLabel!),
+                label: Text(actionLabel!.toUpperCase()),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xl,
+                    vertical: AppSpacing.md,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppRadius.md),
+                  ),
+                  textStyle: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.4,
+                  ),
+                ),
               ),
             ],
           ],
@@ -72,16 +88,17 @@ class AppEmptyState extends StatelessWidget {
 /// Premium hero icon: gradient circular backdrop with the icon in white,
 /// wrapped in a soft colored shadow for depth.
 class _HeroIcon extends StatelessWidget {
-  const _HeroIcon({required this.icon});
+  const _HeroIcon({required this.icon, required this.gradient});
 
   final IconData icon;
+  final Gradient gradient;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      width: 112,
-      height: 112,
+      width: 124,
+      height: 124,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
@@ -95,21 +112,21 @@ class _HeroIcon extends StatelessWidget {
       ),
       child: Center(
         child: Container(
-          width: 76,
-          height: 76,
+          width: 88,
+          height: 88,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            gradient: AppTheme.heroGradient,
+            gradient: gradient,
             boxShadow: [
               BoxShadow(
-                color: theme.colorScheme.primary.withValues(alpha: 0.35),
-                blurRadius: 18,
-                offset: const Offset(0, 10),
+                color: theme.colorScheme.primary.withValues(alpha: 0.45),
+                blurRadius: 22,
+                offset: const Offset(0, 12),
               ),
             ],
           ),
           alignment: Alignment.center,
-          child: Icon(icon, color: Colors.white, size: 36),
+          child: Icon(icon, color: Colors.white, size: 40),
         ),
       ),
     );

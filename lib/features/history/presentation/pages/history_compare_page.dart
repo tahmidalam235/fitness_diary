@@ -67,7 +67,6 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     final rangeA = DateRange(start: _a, end: _endOf(_a));
     final rangeB = DateRange(start: _b, end: _endOf(_b));
 
@@ -82,21 +81,7 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
           AppSpacing.xxl,
         ),
         children: [
-          Text(
-            'COMPARE',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
-            ),
-          ),
-          const Gap(AppSpacing.xs),
-          Text(
-            'Pick a month for each range',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
+          _CompareHero(),
           const Gap(AppSpacing.lg),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -106,6 +91,7 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
                   label: l10n.historyCompareRangeA,
                   range: _a,
                   gradient: AppTheme.heroGradient,
+                  icon: Icons.flag_rounded,
                   onTap: () => _pickMonth(isA: true),
                 ),
               ),
@@ -115,6 +101,7 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
                   label: l10n.historyCompareRangeB,
                   range: _b,
                   gradient: AppTheme.warmGradient,
+                  icon: Icons.outlined_flag_rounded,
                   onTap: () => _pickMonth(isA: false),
                 ),
               ),
@@ -145,17 +132,98 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
   }
 }
 
+/// Hero banner for the compare view.
+class _CompareHero extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: AppTheme.deepGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.compare_arrows_rounded,
+              color: Colors.white,
+              size: 30,
+            ),
+          ),
+          const Gap(AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'COMPARE',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Side by side',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tap a range to change its month',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RangeHeaderCard extends StatelessWidget {
   const _RangeHeaderCard({
     required this.label,
     required this.range,
     required this.gradient,
+    required this.icon,
     required this.onTap,
   });
 
   final String label;
   final DateTime range;
   final Gradient gradient;
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
@@ -173,25 +241,54 @@ class _RangeHeaderCard extends StatelessWidget {
           decoration: BoxDecoration(
             gradient: gradient,
             borderRadius: BorderRadius.circular(AppRadius.md),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.25),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.85),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      icon,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  const Gap(AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const Gap(AppSpacing.xs),
+              const Gap(AppSpacing.sm),
               Text(
                 monthLabel,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: Colors.white,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.3,
                 ),
               ),
               const Gap(AppSpacing.xs),
@@ -200,14 +297,14 @@ class _RangeHeaderCard extends StatelessWidget {
                   const Icon(
                     Icons.edit_calendar_rounded,
                     color: Colors.white,
-                    size: 14,
+                    size: 13,
                   ),
                   const Gap(AppSpacing.xs),
                   Text(
                     'Tap to change',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white.withValues(alpha: 0.92),
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ],
@@ -318,18 +415,21 @@ class _RangeSummary extends StatelessWidget {
           label: 'Workouts',
           value: '${data.workoutCount}',
           accentColor: accentColor,
+          icon: Icons.fitness_center_rounded,
         ),
         const Gap(AppSpacing.sm),
         _KpiTile(
           label: 'Active days',
           value: '${distinctDays.length}',
           accentColor: accentColor,
+          icon: Icons.event_available_rounded,
         ),
         const Gap(AppSpacing.sm),
         _KpiTile(
           label: 'Total sets',
           value: '${data.totalSets}',
           accentColor: accentColor,
+          icon: Icons.format_list_numbered_rounded,
         ),
         const Gap(AppSpacing.md),
         _DayStrip(logs: logs, range: range, accentColor: accentColor),
@@ -379,8 +479,18 @@ class _DayStrip extends StatelessWidget {
               width: 14,
               height: 14,
               decoration: BoxDecoration(
+                gradient: activeDays.contains(first.add(Duration(days: i)).day)
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          accentColor,
+                          accentColor.withValues(alpha: 0.7),
+                        ],
+                      )
+                    : null,
                 color: activeDays.contains(first.add(Duration(days: i)).day)
-                    ? accentColor
+                    ? null
                     : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(3),
               ),
@@ -396,11 +506,13 @@ class _KpiTile extends StatelessWidget {
     required this.label,
     required this.value,
     required this.accentColor,
+    required this.icon,
   });
 
   final String label;
   final String value;
   final Color accentColor;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -408,26 +520,77 @@ class _KpiTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: accentColor.withValues(alpha: 0.10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            accentColor.withValues(alpha: 0.16),
+            accentColor.withValues(alpha: 0.06),
+          ],
+        ),
         borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(color: accentColor.withValues(alpha: 0.30)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: theme.colorScheme.onSurface,
-            ),
+        border: Border.all(
+          color: accentColor.withValues(alpha: 0.35),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withValues(alpha: 0.18),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
-          Text(
-            label,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: accentColor,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.0,
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  accentColor,
+                  accentColor.withValues(alpha: 0.7),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              boxShadow: [
+                BoxShadow(
+                  color: accentColor.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const Gap(AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  label.toUpperCase(),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: accentColor,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.0,
+                    fontSize: 10,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

@@ -258,6 +258,7 @@ class _HistoryPeriodViewState extends State<_HistoryPeriodView> {
                           distinctDays: distinctDays,
                           sessions: distinctSessions,
                           theme: theme,
+                          period: widget.period,
                         ),
                         const Gap(AppSpacing.xl),
                         ...days.map((day) {
@@ -295,48 +296,105 @@ class _SummaryHeader extends StatelessWidget {
     required this.distinctDays,
     required this.sessions,
     required this.theme,
+    required this.period,
   });
 
   final int totalWorkouts;
   final int distinctDays;
   final int sessions;
   final ThemeData theme;
+  final String period;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        gradient: AppTheme.heroGradient,
+        gradient: AppTheme.powerGradient,
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.35),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: const Color(0xFFFF6A1A).withValues(alpha: 0.45),
+            blurRadius: 26,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: _Stat(label: 'WORKOUTS', value: '$totalWorkouts'),
+          Row(
+            children: [
+              Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.22),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.4),
+                    width: 1.5,
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.event_note_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const Gap(AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      period.toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.92),
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.4,
+                        fontSize: 11,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'SUMMARY',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-          Expanded(
-            child: _Stat(label: 'DAYS', value: '$distinctDays'),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withValues(alpha: 0.3),
-          ),
-          Expanded(
-            child: _Stat(label: 'SESSIONS', value: '$sessions'),
+          const Gap(AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: _Stat(label: 'WORKOUTS', value: '$totalWorkouts'),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.3),
+              ),
+              Expanded(
+                child: _Stat(label: 'DAYS', value: '$distinctDays'),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.3),
+              ),
+              Expanded(
+                child: _Stat(label: 'SESSIONS', value: '$sessions'),
+              ),
+            ],
           ),
         ],
       ),
@@ -358,7 +416,7 @@ class _Stat extends StatelessWidget {
           value,
           style: theme.textTheme.headlineSmall?.copyWith(
             color: Colors.white,
-            fontWeight: FontWeight.w800,
+            fontWeight: FontWeight.w900,
             letterSpacing: -0.5,
           ),
         ),
@@ -366,9 +424,10 @@ class _Stat extends StatelessWidget {
         Text(
           label,
           style: theme.textTheme.labelSmall?.copyWith(
-            color: Colors.white.withValues(alpha: 0.85),
+            color: Colors.white.withValues(alpha: 0.92),
             letterSpacing: 1.2,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w800,
+            fontSize: 11,
           ),
         ),
       ],
@@ -403,14 +462,27 @@ class _DaySection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.xs),
-          child: Text(
-            dayLabel.toUpperCase(),
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.primary,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.4,
-            ),
+          padding: const EdgeInsets.only(left: 4, bottom: AppSpacing.sm),
+          child: Row(
+            children: [
+              Container(
+                width: 4,
+                height: 18,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.heroGradient,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+              const Gap(AppSpacing.sm),
+              Text(
+                dayLabel.toUpperCase(),
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
         ...dayLogs.map(
@@ -486,17 +558,41 @@ class _SessionBlock extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
-          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: theme.colorScheme.primary.withValues(alpha: 0.18),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            sessionName,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 16,
+                decoration: BoxDecoration(
+                  gradient: AppTheme.heroGradient,
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                ),
+              ),
+              const Gap(AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  sessionName,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+            ],
           ),
           const Gap(AppSpacing.xs),
           ...entries.map((entry) {
@@ -540,7 +636,7 @@ class _SessionBlock extends StatelessWidget {
                       width: 6,
                       height: 6,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
+                        gradient: AppTheme.heroGradient,
                         borderRadius: BorderRadius.circular(3),
                       ),
                     ),
@@ -553,7 +649,7 @@ class _SessionBlock extends StatelessWidget {
                           name,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onSurface,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         if (detailParts.isNotEmpty)
@@ -564,7 +660,7 @@ class _SessionBlock extends StatelessWidget {
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w500,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
@@ -595,17 +691,33 @@ class _EmptyState extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 124,
+              height: 124,
               decoration: BoxDecoration(
+                shape: BoxShape.circle,
                 color: theme.colorScheme.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(40),
               ),
               alignment: Alignment.center,
-              child: Icon(
-                Icons.event_busy_rounded,
-                size: 36,
-                color: theme.colorScheme.primary,
+              child: Container(
+                width: 88,
+                height: 88,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.heroGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                      blurRadius: 22,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.event_busy_rounded,
+                  size: 44,
+                  color: Colors.white,
+                ),
               ),
             ),
             const Gap(AppSpacing.md),
@@ -614,6 +726,7 @@ class _EmptyState extends StatelessWidget {
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

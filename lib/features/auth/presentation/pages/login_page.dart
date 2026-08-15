@@ -8,6 +8,7 @@ import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../../shared/widgets/app_auth_field.dart';
 import '../../data/auth_service.dart';
 
 /// Returning-user login page.
@@ -126,135 +127,135 @@ class _LoginPageState extends State<LoginPage> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(
-              AppSpacing.lg,
-              AppSpacing.xl,
-              AppSpacing.lg,
-              AppSpacing.xxl,
-            ),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 72,
-                      height: 72,
+      body: AppAuthBackground(
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.xl,
+                AppSpacing.lg,
+                AppSpacing.xxl,
+              ),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const AppAuthBrandMark(),
+                    const SizedBox(height: AppSpacing.lg),
+                    _AuthHeader(
+                      title: l10n.authLoginTitle.toUpperCase(),
+                      subtitle: l10n.authLoginSubtitle,
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    Container(
+                      padding: const EdgeInsets.all(AppSpacing.lg),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F1226),
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(AppRadius.lg),
+                        border: Border.all(
+                          color: theme.colorScheme.outlineVariant
+                              .withValues(alpha: 0.4),
+                        ),
                         boxShadow: [
                           BoxShadow(
-                            color: theme.colorScheme.primary.withValues(
-                              alpha: 0.35,
-                            ),
-                            blurRadius: 18,
-                            offset: const Offset(0, 8),
+                            color: Colors.black.withValues(alpha: 0.18),
+                            blurRadius: 28,
+                            offset: const Offset(0, 16),
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(8),
-                      child: Image.asset(
-                        'assets/logo/fitness_diary_compact.png',
-                        fit: BoxFit.contain,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          AppAuthField(
+                            controller: _usernameCtl,
+                            focusNode: _usernameFocus,
+                            icon: Icons.person_outline_rounded,
+                            label: l10n.authUsername,
+                            errorText: _usernameError,
+                            textInputAction: TextInputAction.next,
+                            onSubmitted: (_) => _passwordFocus.requestFocus(),
+                            autofillHints: const [AutofillHints.username],
+                          ),
+                          const SizedBox(height: AppSpacing.md),
+                          AppAuthField(
+                            controller: _passwordCtl,
+                            focusNode: _passwordFocus,
+                            icon: Icons.lock_outline_rounded,
+                            label: l10n.authPassword,
+                            errorText: _passwordError,
+                            obscureText: _obscurePassword,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _submit(),
+                            autofillHints: const [AutofillHints.password],
+                            trailing: AppObscureToggle(
+                              isObscured: _obscurePassword,
+                              onTap: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
+                          ),
+                          if (_generalError != null) ...[
+                            const SizedBox(height: AppSpacing.md),
+                            AppAuthBannerError(text: _generalError!),
+                          ],
+                          const SizedBox(height: AppSpacing.lg),
+                          FilledButton(
+                            onPressed: _submitting ? null : _submit,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: theme.colorScheme.primary,
+                              foregroundColor: theme.colorScheme.onPrimary,
+                              minimumSize: const Size.fromHeight(56),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppRadius.md,
+                                ),
+                              ),
+                              textStyle: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            child: _submitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(l10n.authLoginButton.toUpperCase()),
+                          ),
+                          // "Forgot Password?" — sits directly below the
+                          // primary CTA so it reads as a secondary action on
+                          // the sign-in form. Opens a dialog that asks for
+                          // the sign-in username, looks it up via the public
+                          // `usernames` collection, and dispatches the
+                          // Firebase password-reset flow.
+                          Align(
+                            alignment: Alignment.center,
+                            child: TextButton(
+                              onPressed: _submitting
+                                  ? null
+                                  : () => _showForgotPasswordDialog(context),
+                              child: Text(l10n.authForgotPassword),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.lg),
-                  Text(
-                    l10n.authLoginTitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    l10n.authLoginSubtitle,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xl),
-                  _LoginField(
-                    controller: _usernameCtl,
-                    focusNode: _usernameFocus,
-                    icon: Icons.person_outline_rounded,
-                    label: l10n.authUsername,
-                    errorText: _usernameError,
-                    textInputAction: TextInputAction.next,
-                    onSubmitted: (_) => _passwordFocus.requestFocus(),
-                    autofillHints: const [AutofillHints.username],
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  _LoginField(
-                    controller: _passwordCtl,
-                    focusNode: _passwordFocus,
-                    icon: Icons.lock_outline_rounded,
-                    label: l10n.authPassword,
-                    errorText: _passwordError,
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => _submit(),
-                    autofillHints: const [AutofillHints.password],
-                    trailing: IconButton(
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off_rounded
-                            : Icons.visibility_rounded,
-                        size: 20,
-                      ),
-                      tooltip: _obscurePassword
-                          ? 'Show password'
-                          : 'Hide password',
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                  if (_generalError != null) ...[
                     const SizedBox(height: AppSpacing.md),
-                    _BannerError(text: _generalError!),
-                  ],
-                  const SizedBox(height: AppSpacing.lg),
-                  FilledButton(
-                    onPressed: _submitting ? null : _submit,
-                    child: _submitting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : Text(l10n.authLoginButton),
-                  ),
-                  // "Forgot Password?" — sits directly below the
-                  // primary CTA so it reads as a secondary action on
-                  // the sign-in form. Opens a dialog that asks for
-                  // the sign-in username, looks it up via the public
-                  // `usernames` collection, and dispatches the
-                  // Firebase password-reset flow.
-                  Align(
-                    alignment: Alignment.center,
-                    child: TextButton(
+                    TextButton.icon(
                       onPressed: _submitting
                           ? null
-                          : () => _showForgotPasswordDialog(context),
-                      child: Text(l10n.authForgotPassword),
+                          : () => context.go(RoutePaths.signup),
+                      icon: const Icon(Icons.bolt_rounded, size: 18),
+                      label: Text(l10n.authNoAccount),
                     ),
-                  ),
-                  const SizedBox(height: AppSpacing.md),
-                  TextButton(
-                    onPressed: _submitting
-                        ? null
-                        : () => context.go(RoutePaths.signup),
-                    child: Text(l10n.authNoAccount),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -264,148 +265,37 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-class _LoginField extends StatelessWidget {
-  const _LoginField({
-    required this.controller,
-    required this.focusNode,
-    required this.icon,
-    required this.label,
-    this.errorText,
-    this.obscureText = false,
-    this.textInputAction,
-    this.onSubmitted,
-    this.autofillHints,
-    this.trailing,
-  });
+/// Branded auth-page header — kicker, title and subtitle.
+class _AuthHeader extends StatelessWidget {
+  const _AuthHeader({required this.title, required this.subtitle});
 
-  final TextEditingController controller;
-  final FocusNode focusNode;
-  final IconData icon;
-  final String label;
-  final String? errorText;
-  final bool obscureText;
-  final TextInputAction? textInputAction;
-  final ValueChanged<String>? onSubmitted;
-  final Iterable<String>? autofillHints;
-  final Widget? trailing;
+  final String title;
+  final String subtitle;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final hasError = errorText != null;
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: hasError
-              ? theme.colorScheme.error.withValues(alpha: 0.7)
-              : theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+    return Column(
+      children: [
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.4,
+          ),
         ),
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  gradient: AppTheme.heroGradient,
-                  borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
-                ),
-                alignment: Alignment.center,
-                child: Icon(icon, color: Colors.white, size: 18),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  obscureText: obscureText,
-                  textInputAction: textInputAction,
-                  onSubmitted: onSubmitted,
-                  autofillHints: autofillHints,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    isCollapsed: true,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 4),
-                    labelText: label,
-                    labelStyle: theme.textTheme.labelMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.4,
-                    ),
-                    floatingLabelBehavior: FloatingLabelBehavior.never,
-                  ),
-                ),
-              ),
-              ?trailing,
-            ],
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          subtitle,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: Colors.white.withValues(alpha: 0.92),
+            fontWeight: FontWeight.w600,
           ),
-          if (hasError) ...[
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 48),
-              child: Text(
-                errorText!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _BannerError extends StatelessWidget {
-  const _BannerError({required this.text});
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        border: Border.all(
-          color: theme.colorScheme.error.withValues(alpha: 0.4),
         ),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            Icons.error_outline_rounded,
-            color: theme.colorScheme.error,
-            size: 18,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              text,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.error,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
+      ],
     );
   }
 }
@@ -506,16 +396,16 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
     final l10n = widget.l10n;
     return AlertDialog(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       title: Row(
         children: [
           Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
               gradient: AppTheme.heroGradient,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
             ),
             alignment: Alignment.center,
             child: const Icon(
@@ -559,7 +449,7 @@ class _ForgotPasswordDialogState extends State<_ForgotPasswordDialog> {
               prefixIcon: const Icon(Icons.alternate_email_rounded),
               errorText: _emailError,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppRadius.sm),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
             ),
           ),

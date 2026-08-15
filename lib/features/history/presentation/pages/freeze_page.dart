@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../core/usecase/no_params.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
@@ -54,25 +55,67 @@ class _FreezePageState extends State<FreezePage> {
               AppSpacing.xxl,
             ),
             children: [
+              _FreezeHero(
+                frozenCount: frozen.length,
+              ),
+              const Gap(AppSpacing.lg),
               Container(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.10),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      const Color(0xFF60A5FA).withValues(alpha: 0.18),
+                      const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                    ],
+                  ),
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    color: const Color(0xFF60A5FA).withValues(alpha: 0.4),
+                    width: 1.2,
                   ),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.ac_unit_rounded, color: Color(0xFF60A5FA)),
-                    const Gap(AppSpacing.sm),
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Color(0xFF60A5FA),
+                            Color(0xFF7C3AED),
+                          ],
+                        ),
+                        borderRadius:
+                            BorderRadius.circular(AppRadius.sm),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                const Color(0xFF60A5FA).withValues(alpha: 0.4),
+                            blurRadius: 12,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      alignment: Alignment.center,
+                      child: const Icon(
+                        Icons.ac_unit_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
+                    ),
+                    const Gap(AppSpacing.md),
                     Expanded(
                       child: Text(
                         l10n.historyFreezeHelp,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface,
                           fontWeight: FontWeight.w600,
+                          height: 1.4,
                         ),
                       ),
                     ),
@@ -80,13 +123,27 @@ class _FreezePageState extends State<FreezePage> {
                 ),
               ),
               const Gap(AppSpacing.lg),
-              Text(
-                'LAST 30 DAYS',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 1.4,
-                ),
+              Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 18,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.heroGradient,
+                      borderRadius:
+                          BorderRadius.circular(AppRadius.pill),
+                    ),
+                  ),
+                  const Gap(AppSpacing.sm),
+                  Text(
+                    'LAST 30 DAYS',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.4,
+                    ),
+                  ),
+                ],
               ),
               const Gap(AppSpacing.sm),
               _FreezeStrip(
@@ -96,13 +153,24 @@ class _FreezePageState extends State<FreezePage> {
               const Gap(AppSpacing.lg),
               if (frozen.isEmpty)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-                  child: Text(
-                    l10n.historyFreezeEmpty,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
+                  child: Column(
+                    children: [
+                      Icon(
+                        Icons.ac_unit_outlined,
+                        size: 36,
+                        color: theme.colorScheme.outline,
+                      ),
+                      const Gap(AppSpacing.sm),
+                      Text(
+                        l10n.historyFreezeEmpty,
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 )
               else
@@ -124,6 +192,96 @@ class _FreezePageState extends State<FreezePage> {
         context,
       ).showSnackBar(SnackBar(content: Text(failure.message)));
     }, (_) {});
+  }
+}
+
+/// Hero banner with frozen-day counter.
+class _FreezeHero extends StatelessWidget {
+  const _FreezeHero({required this.frozenCount});
+
+  final int frozenCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF60A5FA),
+            Color(0xFF7C3AED),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF60A5FA).withValues(alpha: 0.45),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.ac_unit_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const Gap(AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'REST DAYS',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  '$frozenCount scheduled',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Tap a day below to mark it as rest',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -167,7 +325,7 @@ class _FreezeStrip extends StatelessWidget {
         ),
         const Gap(AppSpacing.xs),
         SizedBox(
-          height: 80,
+          height: 84,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 2),
@@ -216,22 +374,41 @@ class _FreezeChip extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         child: Container(
-          width: 56,
+          width: 60,
           padding: const EdgeInsets.symmetric(
             vertical: AppSpacing.sm,
             horizontal: AppSpacing.xs,
           ),
           decoration: BoxDecoration(
+            gradient: frozen
+                ? const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Color(0xFF60A5FA),
+                      Color(0xFF7C3AED),
+                    ],
+                  )
+                : null,
             color: frozen
-                ? theme.colorScheme.primary.withValues(alpha: 0.18)
+                ? null
                 : theme.colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(AppRadius.md),
             border: Border.all(
               color: frozen
-                  ? theme.colorScheme.primary.withValues(alpha: 0.6)
+                  ? Colors.transparent
                   : theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
               width: frozen ? 1.5 : 1,
             ),
+            boxShadow: frozen
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF60A5FA).withValues(alpha: 0.4),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ]
+                : null,
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -240,7 +417,7 @@ class _FreezeChip extends StatelessWidget {
                 weekday,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: frozen
-                      ? theme.colorScheme.primary
+                      ? Colors.white.withValues(alpha: 0.92)
                       : theme.colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w800,
                   fontSize: 10,
@@ -251,9 +428,9 @@ class _FreezeChip extends StatelessWidget {
               Text(
                 dayNum,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w900,
                   color: frozen
-                      ? theme.colorScheme.primary
+                      ? Colors.white
                       : theme.colorScheme.onSurface,
                 ),
               ),
@@ -264,7 +441,7 @@ class _FreezeChip extends StatelessWidget {
                     : (isToday ? Icons.bolt_rounded : Icons.circle_outlined),
                 size: 14,
                 color: frozen
-                    ? theme.colorScheme.primary
+                    ? Colors.white
                     : (isToday
                           ? theme.colorScheme.primary
                           : theme.colorScheme.outlineVariant),
@@ -292,30 +469,85 @@ class _FrozenList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'FROZEN DAYS (${sorted.length})',
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.4,
-          ),
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 18,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF60A5FA),
+                    Color(0xFF7C3AED),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+              ),
+            ),
+            const Gap(AppSpacing.sm),
+            Text(
+              'FROZEN DAYS (${sorted.length})',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.4,
+              ),
+            ),
+          ],
         ),
         const Gap(AppSpacing.sm),
         for (final d in sorted)
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.ac_unit_rounded,
-                  size: 16,
-                  color: Color(0xFF60A5FA),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(AppRadius.sm),
+                border: Border.all(
+                  color: const Color(0xFF60A5FA).withValues(alpha: 0.3),
+                  width: 1,
                 ),
-                const Gap(AppSpacing.sm),
-                Expanded(
-                  child: Text(fmt.format(d), style: theme.textTheme.bodyMedium),
-                ),
-              ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Color(0xFF60A5FA),
+                          Color(0xFF7C3AED),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.ac_unit_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const Gap(AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      fmt.format(d),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
       ],

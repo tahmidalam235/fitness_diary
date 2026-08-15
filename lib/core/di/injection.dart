@@ -153,6 +153,7 @@ extension InjectionConfig on GetIt {
         createSession: getIt(),
         updateSession: getIt(),
         deleteSession: getIt(),
+        watchAllWorkouts: getIt(),
       ),
     );
   }
@@ -176,6 +177,9 @@ extension InjectionConfig on GetIt {
 
     registerLazySingleton<WatchWorkoutsForSession>(
       () => WatchWorkoutsForSession(repository: getIt()),
+    );
+    registerLazySingleton<WatchAllWorkouts>(
+      () => WatchAllWorkouts(repository: getIt()),
     );
     registerLazySingleton<AddWorkoutToSession>(
       () => AddWorkoutToSession(repository: getIt()),

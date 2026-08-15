@@ -56,6 +56,27 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   @override
+  Stream<Either<Failure, List<Workout>>> watchAllWorkouts() {
+    return dataSource.workoutDao.watchAllWorkouts().map<
+      Either<Failure, List<Workout>>
+    >((models) {
+      final list = <Workout>[for (final m in models) m.toEntity()];
+      return Right<Failure, List<Workout>>(list);
+    }).handleError(
+      (Object error) => Left<Failure, List<Workout>>(
+        mapExceptionToFailure(
+          error is AppException
+              ? error
+              : UnexpectedException(
+                  'Failed to watch all workouts',
+                  cause: error,
+                ),
+        ),
+      ),
+    );
+  }
+
+  @override
   Future<Either<Failure, Workout>> addWorkoutToSession({
     required int sessionId,
     required String exerciseName,

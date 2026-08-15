@@ -12,6 +12,7 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
 import '../../../workout/domain/entities/body_part.dart';
 import '../../../workout/domain/entities/workout.dart';
 import '../../../workout/presentation/bloc/workout_list_bloc.dart';
@@ -128,7 +129,42 @@ class _BodyState extends State<_Body> {
                 state is WorkoutTrackingLoaded && state.entry != null;
             return IconButton(
               tooltip: l10n.commonSave,
-              icon: const Icon(Icons.check_rounded),
+              icon: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: canSave
+                      ? AppTheme.freshGradient
+                      : LinearGradient(
+                          colors: [
+                            Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                            Theme.of(context)
+                                .colorScheme
+                                .surfaceContainerHighest,
+                          ],
+                        ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: canSave
+                      ? const [
+                          BoxShadow(
+                            color: Color(0x4034D399),
+                            blurRadius: 8,
+                            offset: Offset(0, 4),
+                          ),
+                        ]
+                      : null,
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  Icons.check_rounded,
+                  color: canSave
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: 22,
+                ),
+              ),
               onPressed: canSave
                   ? () {
                       // Mirror the just-edited values into the workout
@@ -152,7 +188,8 @@ class _BodyState extends State<_Body> {
                           // Use the body-part picked on this screen (if
                           // the user changed it), otherwise carry the
                           // template value through unchanged.
-                          targetedBodyPart: _selectedBodyPart ?? w.targetedBodyPart,
+                          targetedBodyPart:
+                              _selectedBodyPart ?? w.targetedBodyPart,
                         ),
                       );
                       context.pop();
@@ -231,7 +268,7 @@ class _SingleCardLayout extends StatelessWidget {
         AppSpacing.xxxl,
       ),
       children: [
-        _SummaryHero(workout: workout, entry: entry),
+        _SummaryHero(workout: workout, entry: entry, bodyPart: selectedBodyPart),
         const Gap(AppSpacing.md),
         _TrackingCard(
           workout: workout,
@@ -244,12 +281,17 @@ class _SingleCardLayout extends StatelessWidget {
   }
 }
 
-/// Gradient hero with workout summary stats.
+/// Gradient hero with workout summary stats and the body-part chip.
 class _SummaryHero extends StatelessWidget {
-  const _SummaryHero({required this.workout, required this.entry});
+  const _SummaryHero({
+    required this.workout,
+    required this.entry,
+    required this.bodyPart,
+  });
 
   final Workout workout;
   final WorkoutLogEntry entry;
+  final BodyPart? bodyPart;
 
   /// Displays [seconds] as minutes. We always render whole minutes in
   /// the UI; the bloc stores seconds canonically.
@@ -268,21 +310,59 @@ class _SummaryHero extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-            blurRadius: 18,
-            offset: const Offset(0, 10),
+            color: theme.colorScheme.primary.withValues(alpha: 0.4),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.sm,
+                  vertical: AppSpacing.xs,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(AppRadius.pill),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.35),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (bodyPart != null) ...[
+                      Icon(bodyPart!.icon, size: 12, color: Colors.white),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      (bodyPart?.label ?? 'TRACKING').toUpperCase(),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.4,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md),
           Text(
             workout.exerciseName,
-            style: theme.textTheme.headlineSmall?.copyWith(
+            style: theme.textTheme.headlineMedium?.copyWith(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.4,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.6,
+              height: 1.1,
             ),
           ),
           if (workout.notes.isNotEmpty) ...[
@@ -290,7 +370,8 @@ class _SummaryHero extends StatelessWidget {
             Text(
               workout.notes,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: Colors.white.withValues(alpha: 0.85),
+                color: Colors.white.withValues(alpha: 0.92),
+                fontWeight: FontWeight.w500,
                 height: 1.4,
               ),
               maxLines: 2,
@@ -300,24 +381,34 @@ class _SummaryHero extends StatelessWidget {
           const Gap(AppSpacing.lg),
           Row(
             children: [
-              _HeroStat(label: 'Sets', value: entry.sets?.toString() ?? '—'),
-              const Gap(AppSpacing.md),
-              _HeroStat(label: 'Reps', value: entry.reps?.toString() ?? '—'),
-              const Gap(AppSpacing.md),
               _HeroStat(
-                label: 'Weight',
+                label: 'SETS',
+                value: entry.sets?.toString() ?? '—',
+                icon: Icons.format_list_numbered_rounded,
+              ),
+              const Gap(AppSpacing.sm),
+              _HeroStat(
+                label: 'REPS',
+                value: entry.reps?.toString() ?? '—',
+                icon: Icons.repeat_rounded,
+              ),
+              const Gap(AppSpacing.sm),
+              _HeroStat(
+                label: 'WEIGHT',
                 value: entry.weight == null
                     ? '—'
                     : entry.weight == entry.weight!.roundToDouble()
-                    ? '${entry.weight!.toInt()}'
-                    : entry.weight!.toStringAsFixed(1),
+                        ? '${entry.weight!.toInt()}'
+                        : entry.weight!.toStringAsFixed(1),
+                icon: Icons.fitness_center_rounded,
               ),
-              const Gap(AppSpacing.md),
+              const Gap(AppSpacing.sm),
               _HeroStat(
-                label: 'Duration',
+                label: 'TIME',
                 value: entry.durationSeconds == null
                     ? '—'
                     : _formatDuration(entry.durationSeconds!),
+                icon: Icons.timer_outlined,
               ),
             ],
           ),
@@ -328,10 +419,15 @@ class _SummaryHero extends StatelessWidget {
 }
 
 class _HeroStat extends StatelessWidget {
-  const _HeroStat({required this.label, required this.value});
+  const _HeroStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
 
   final String label;
   final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -339,31 +435,48 @@ class _HeroStat extends StatelessWidget {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
+          horizontal: AppSpacing.sm,
           vertical: AppSpacing.sm,
         ),
         decoration: BoxDecoration(
           color: Colors.white.withValues(alpha: 0.18),
           borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.25),
+            width: 1,
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              label.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: Colors.white.withValues(alpha: 0.8),
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
+            Row(
+              children: [
+                Icon(icon, size: 12, color: Colors.white.withValues(alpha: 0.85)),
+                const SizedBox(width: 4),
+                Flexible(
+                  child: Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.92),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.8,
+                      fontSize: 9,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            const Gap(2),
+            const SizedBox(height: 2),
             Text(
               value,
-              style: theme.textTheme.titleMedium?.copyWith(
+              style: theme.textTheme.titleLarge?.copyWith(
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
+                fontWeight: FontWeight.w900,
                 letterSpacing: -0.4,
+                height: 1.0,
               ),
             ),
           ],
@@ -416,9 +529,9 @@ class _TrackingCard extends StatelessWidget {
                 Container(
                   width: 36,
                   height: 36,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.heroGradient,
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
+                  decoration: const BoxDecoration(
+                    gradient: AppTheme.freshGradient,
+                    borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
                   ),
                   alignment: Alignment.center,
                   child: const Icon(
@@ -430,17 +543,25 @@ class _TrackingCard extends StatelessWidget {
                 const Gap(AppSpacing.md),
                 Expanded(
                   child: Text(
-                    "Today's record",
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    "TODAY'S RECORD",
+                    style: AppSectionHeader.titleStyle(theme),
                   ),
                 ),
                 IconButton(
                   tooltip: 'Delete today\'s record',
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    color: theme.colorScheme.error.withValues(alpha: 0.85),
+                  icon: Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppRadius.sm),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      color: theme.colorScheme.error,
+                      size: 18,
+                    ),
                   ),
                   onPressed: () => context.read<WorkoutTrackingBloc>().add(
                     const DeleteTodayEntryEvent(),
@@ -455,7 +576,7 @@ class _TrackingCard extends StatelessWidget {
             // the workout template (and Session card) reflects it.
             Material(
               color: theme.colorScheme.surfaceContainerHighest
-                  .withValues(alpha: 0.45),
+                  .withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(AppRadius.md),
               clipBehavior: Clip.antiAlias,
               child: InkWell(
@@ -478,13 +599,24 @@ class _TrackingCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(
-                        selectedBodyPart?.icon ??
-                            Icons.add_circle_outline_rounded,
-                        size: 20,
-                        color: selectedBodyPart != null
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant,
+                      Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: selectedBodyPart != null
+                              ? theme.colorScheme.primary.withValues(alpha: 0.14)
+                              : theme.colorScheme.surfaceContainerHigh,
+                          borderRadius: BorderRadius.circular(AppRadius.sm),
+                        ),
+                        alignment: Alignment.center,
+                        child: Icon(
+                          selectedBodyPart?.icon ??
+                              Icons.add_circle_outline_rounded,
+                          size: 18,
+                          color: selectedBodyPart != null
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                        ),
                       ),
                       const Gap(AppSpacing.sm),
                       Expanded(
@@ -497,19 +629,18 @@ class _TrackingCard extends StatelessWidget {
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color:
                                     theme.colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 9,
-                                letterSpacing: 0.5,
+                                fontWeight: FontWeight.w800,
+                                fontSize: 10,
+                                letterSpacing: 1.0,
                               ),
                             ),
                             const Gap(2),
                             Text(
                               selectedBodyPart?.label ??
                                   l10n.workoutTargetedBodyPartEmpty,
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: selectedBodyPart != null
-                                    ? FontWeight.w600
-                                    : FontWeight.w500,
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.1,
                                 color: selectedBodyPart != null
                                     ? theme.colorScheme.onSurface
                                     : theme.colorScheme.onSurfaceVariant,
@@ -535,6 +666,7 @@ class _TrackingCard extends StatelessWidget {
                     label: 'Sets',
                     initialValue: entry.sets?.toString() ?? '',
                     icon: Icons.format_list_numbered_rounded,
+                    suffix: 'reps',
                     onChanged: (text) {
                       upsert(
                         sets: text.trim().isEmpty
@@ -561,7 +693,7 @@ class _TrackingCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Gap(AppSpacing.sm),
+            const Gap(AppSpacing.md),
             Row(
               children: [
                 Expanded(
@@ -570,9 +702,10 @@ class _TrackingCard extends StatelessWidget {
                     initialValue: entry.weight == null
                         ? ''
                         : entry.weight == entry.weight!.roundToDouble()
-                        ? entry.weight!.toInt().toString()
-                        : entry.weight!.toString(),
+                            ? entry.weight!.toInt().toString()
+                            : entry.weight!.toString(),
                     icon: Icons.fitness_center_rounded,
+                    suffix: 'kg',
                     onChanged: (text) {
                       upsert(
                         weight: text.trim().isEmpty
@@ -585,11 +718,12 @@ class _TrackingCard extends StatelessWidget {
                 const Gap(AppSpacing.md),
                 Expanded(
                   child: _NumericField(
-                    label: 'Duration (min)',
+                    label: 'Duration',
                     initialValue: entry.durationSeconds == null
                         ? ''
                         : (entry.durationSeconds! / 60).round().toString(),
                     icon: Icons.timer_outlined,
+                    suffix: 'min',
                     onChanged: (text) {
                       upsert(
                         durationSeconds: text.trim().isEmpty
@@ -616,11 +750,13 @@ class _NumericField extends StatefulWidget {
     required this.initialValue,
     required this.icon,
     required this.onChanged,
+    this.suffix,
   });
 
   final String label;
   final String initialValue;
   final IconData icon;
+  final String? suffix;
   final ValueChanged<String> onChanged;
 
   @override
@@ -644,12 +780,23 @@ class _NumericFieldState extends State<_NumericField> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: _controller,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      style: theme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        letterSpacing: -0.2,
+      ),
       decoration: InputDecoration(
         labelText: widget.label,
         prefixIcon: Icon(widget.icon, size: 20),
+        suffixText: widget.suffix,
+        suffixStyle: theme.textTheme.labelSmall?.copyWith(
+          color: theme.colorScheme.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
       ),
       onChanged: widget.onChanged,
     );

@@ -4,8 +4,9 @@ import 'package:gap/gap.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/theme/app_radius.dart';
 import '../../../../core/theme/app_spacing.dart';
-import '../../../../l10n/app_localizations.dart';
+import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
 import '../../data/notification_service.dart';
 import '../../data/settings_service.dart';
 import '../../data/theme_service.dart';
@@ -16,13 +17,12 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     final themeSvc = getIt<ThemeService>();
     final settingsSvc = getIt<SettingsService>();
     final notifySvc = getIt<NotificationService>();
 
     return AppScaffold(
-      title: l10n.settingsTitle,
+      title: 'Settings',
       useNavigationRail: true,
       body: ListenableBuilder(
         listenable: Listenable.merge([themeSvc, settingsSvc]),
@@ -30,8 +30,13 @@ class SettingsPage extends StatelessWidget {
           return ListView(
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              _SectionHeader(title: 'Appearance'),
-              const Gap(AppSpacing.sm),
+              _SettingsHero(),
+              const Gap(AppSpacing.xl),
+              const AppSectionHeader(
+                title: 'APPEARANCE',
+                icon: Icons.palette_outlined,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 children: [
                   _ToggleRow(
@@ -43,8 +48,11 @@ class SettingsPage extends StatelessWidget {
                 ],
               ),
               const Gap(AppSpacing.lg),
-              _SectionHeader(title: 'Units'),
-              const Gap(AppSpacing.sm),
+              const AppSectionHeader(
+                title: 'UNITS',
+                icon: Icons.straighten_outlined,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 children: [
                   _PickerRow<WeightUnit>(
@@ -58,8 +66,11 @@ class SettingsPage extends StatelessWidget {
                 ],
               ),
               const Gap(AppSpacing.lg),
-              _SectionHeader(title: 'Reminders'),
-              const Gap(AppSpacing.sm),
+              const AppSectionHeader(
+                title: 'REMINDERS',
+                icon: Icons.notifications_active_outlined,
+              ),
+              const SizedBox(height: AppSpacing.xs),
               _SettingsCard(
                 children: [
                   _ToggleRow(
@@ -104,6 +115,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                 ],
               ),
+              const Gap(AppSpacing.xl),
             ],
           );
         },
@@ -112,21 +124,81 @@ class SettingsPage extends StatelessWidget {
   }
 }
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader({required this.title});
-  final String title;
-
+/// Settings hero: gradient banner reminding the user that settings
+/// personalize their workout tracking experience.
+class _SettingsHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        title.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 1.2,
-        ),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        gradient: AppTheme.deepGradient,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            blurRadius: 22,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.18),
+              borderRadius: BorderRadius.circular(AppRadius.md),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.35),
+                width: 1.5,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.settings_rounded,
+              color: Colors.white,
+              size: 28,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'PREFERENCES',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Make it yours',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Tune your app to match your training style.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -138,15 +210,21 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(
-          color: Theme.of(
-            context,
-          ).colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.colorScheme.shadow.withValues(alpha: 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(children: children),
     );
@@ -170,7 +248,13 @@ class _ToggleRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: _IconBox(icon: icon),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.1,
+        ),
+      ),
       trailing: Switch(value: value, onChanged: onChanged),
     );
   }
@@ -191,18 +275,39 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListTile(
       onTap: onTap,
       leading: _IconBox(icon: icon),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.1,
+        ),
+      ),
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.w700,
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primaryContainer.withValues(
+                alpha: 0.55,
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+            ),
+            child: Text(
+              value,
+              style: TextStyle(
+                color: theme.colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.2,
+              ),
             ),
           ),
           const Gap(AppSpacing.xs),
@@ -232,17 +337,34 @@ class _PickerRow<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return ListTile(
       leading: _IconBox(icon: icon),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.1,
+        ),
+      ),
       trailing: DropdownButton<T>(
         value: value,
         underline: const SizedBox(),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         onChanged: (v) {
           if (v != null) onChanged(v);
         },
         items: items.map((i) {
-          return DropdownMenuItem(value: i, child: Text(itemLabel(i)));
+          return DropdownMenuItem(
+            value: i,
+            child: Text(
+              itemLabel(i),
+              style: TextStyle(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          );
         }).toList(),
       ),
     );
@@ -256,14 +378,21 @@ class _IconBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(AppRadius.sm),
+      width: 38,
+      height: 38,
+      decoration: const BoxDecoration(
+        gradient: AppTheme.heroGradient,
+        borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0x406366F1),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ],
       ),
       alignment: Alignment.center,
-      child: Icon(icon, size: 20),
+      child: Icon(icon, size: 18, color: Colors.white),
     );
   }
 }

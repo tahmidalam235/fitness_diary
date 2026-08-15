@@ -14,6 +14,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_loading_indicator.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/app_section_header.dart';
 import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
@@ -156,6 +157,15 @@ class _DashboardViewState extends State<_DashboardView> {
                 AppSpacing.xxl,
               ),
               children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Icon(
+                    Icons.fitness_center_rounded,
+                    size: 32,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+                const Gap(AppSpacing.lg),
                 _KpiRow(stats: stats, l10n: l10n, theme: theme),
                 const Gap(AppSpacing.xl),
                 _RecentActivitySection(
@@ -259,9 +269,9 @@ class _KpiTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -270,30 +280,33 @@ class _KpiTile extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 32,
-            height: 32,
+            width: 36,
+            height: 36,
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.22),
               borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             alignment: Alignment.center,
-            child: Icon(icon, color: Colors.white, size: 18),
+            child: Icon(icon, color: Colors.white, size: 20),
           ),
           const Gap(AppSpacing.md),
           Text(
             value == null ? '…' : '$value',
-            style: theme.textTheme.headlineMedium?.copyWith(
+            style: theme.textTheme.headlineLarge?.copyWith(
               color: Colors.white,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.8,
+              height: 1.0,
             ),
           ),
-          const Gap(AppSpacing.xxs),
+          const Gap(AppSpacing.xs),
           Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
+            label.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
               color: Colors.white,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.0,
+              fontSize: 10,
               height: 1.2,
             ),
             maxLines: 2,
@@ -304,7 +317,8 @@ class _KpiTile extends StatelessWidget {
             sub,
             style: theme.textTheme.labelSmall?.copyWith(
               color: Colors.white.withValues(alpha: 0.85),
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
+              fontSize: 10,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -338,7 +352,10 @@ class _RecentActivitySection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _SectionTitle(title: l10n.dashboardRecentTitle),
+        AppSectionHeader(
+          title: l10n.dashboardRecentTitle,
+          icon: Icons.bolt_rounded,
+        ),
         const Gap(AppSpacing.sm),
         if (recent.isEmpty)
           _EmptyRecentCard(message: l10n.dashboardRecentEmpty)
@@ -362,15 +379,12 @@ class _RecentActivitySection extends StatelessWidget {
 
   List<_RecentItem> _recent(List<Session> sessions, int totalWorkouts) {
     if (sessions.isEmpty) return const [];
-    // No real per-day data plumbing here without a heavier read path, so
-    // summarise by session template: each session gets a "ready to go"
-    // preview card so the dashboard feels populated even on day one.
     final out = <_RecentItem>[];
-    // Cycle through three bright accent colors so the list feels alive.
-    const accents = <Color>[
-      Color(0xFF22D3EE), // cyan-400
-      Color(0xFFFB923C), // orange-400
-      Color(0xFFA78BFA), // violet-400
+    // Cycle through three bright accent gradients so the list feels alive.
+    final accents = <LinearGradient>[
+      AppTheme.freshGradient,
+      AppTheme.warmGradient,
+      AppTheme.heroGradient,
     ];
     for (var i = 0; i < sessions.take(4).length; i++) {
       final s = sessions[i];
@@ -383,7 +397,7 @@ class _RecentActivitySection extends StatelessWidget {
               ? 'Tap to open the session and start a workout.'
               : s.description,
           icon: Icons.style_rounded,
-          accent: accent,
+          gradient: accent,
         ),
       );
     }
@@ -397,13 +411,13 @@ class _RecentItem {
     required this.title,
     required this.subtitle,
     required this.icon,
-    required this.accent,
+    required this.gradient,
   });
   final int sessionId;
   final String title;
   final String subtitle;
   final IconData icon;
-  final Color accent;
+  final LinearGradient gradient;
 }
 
 class _RecentActivityCard extends StatelessWidget {
@@ -445,18 +459,18 @@ class _RecentActivityCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      item.accent.withValues(alpha: 0.25),
-                      item.accent.withValues(alpha: 0.10),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(AppRadius.sm),
+                  gradient: item.gradient,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.shadow.withValues(alpha: 0.18),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 alignment: Alignment.center,
-                child: Icon(item.icon, color: item.accent, size: 22),
+                child: Icon(item.icon, color: Colors.white, size: 22),
               ),
               const Gap(AppSpacing.md),
               Expanded(
@@ -466,7 +480,7 @@ class _RecentActivityCard extends StatelessWidget {
                     Text(
                       item.title,
                       style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: -0.1,
                       ),
                       maxLines: 1,
@@ -477,6 +491,7 @@ class _RecentActivityCard extends StatelessWidget {
                       item.subtitle,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.35,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -531,11 +546,11 @@ class _EmptyRecentCard extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(AppRadius.sm),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFFF59E0B).withValues(alpha: 0.4),
@@ -558,47 +573,12 @@ class _EmptyRecentCard extends StatelessWidget {
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: const Color(0xFF78350F), // amber-900
                 fontWeight: FontWeight.w700,
-                height: 1.35,
+                height: 1.4,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-// ============================================================================
-// SHARED SECTION TITLE
-// ============================================================================
-
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({required this.title});
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 4,
-          height: 16,
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primary,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-          ),
-        ),
-        const Gap(AppSpacing.sm),
-        Text(
-          title.toUpperCase(),
-          style: theme.textTheme.labelMedium?.copyWith(
-            color: theme.colorScheme.primary,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 1.4,
-          ),
-        ),
-      ],
     );
   }
 }
