@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/routes/route_paths.dart';
 import '../../../../core/theme/app_durations.dart';
+import '../../../../core/theme/app_spacing.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -42,7 +43,16 @@ class _SplashPageState extends State<SplashPage> {
         fit: StackFit.expand,
         children: [
           _SplashBackground(),
-          Center(child: _SplashLogo()),
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _CircularLoader(),
+                SizedBox(height: AppSpacing.xl),
+                _SplashLogo(),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -184,4 +194,117 @@ class _SplashLogoState extends State<_SplashLogo>
       },
     );
   }
+}
+
+/// Rotating circular loader with a soft white "track" ring and a bright
+/// orange → pink → red gradient arc that sweeps around it. Matches the
+/// reference style: subtle background ring with an energetic colored
+/// arc on top.
+class _CircularLoader extends StatefulWidget {
+  const _CircularLoader();
+
+  @override
+  State<_CircularLoader> createState() => _CircularLoaderState();
+}
+
+class _CircularLoaderState extends State<_CircularLoader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    // 1.4s per full rotation — fast enough to feel alive, slow enough
+    // to read as deliberate motion.
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 72,
+      height: 72,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Transform.rotate(
+            angle: _controller.value * 2 * 3.141592653589793,
+            child: CustomPaint(
+              painter: _CircularLoaderPainter(),
+              size: const Size(72, 72),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// Custom painter for the circular loader.
+///
+/// Layered composition (back to front):
+///   1. Soft white background ring — 60% opacity, gives the loader a
+///      visible "track" on the red gradient.
+///   2. Bright gradient arc — 270° sweep across orange → pink → red,
+///      matches the warm palette of the reference image.
+class _CircularLoaderPainter extends CustomPainter {
+  static const double _strokeWidth = 7.0;
+  static const double _trackOpacity = 0.45;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.shortestSide - _strokeWidth) / 2;
+
+    // 1. Background track — soft white ring at reduced opacity.
+    final track = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..color = Colors.white.withValues(alpha: _trackOpacity);
+    canvas.drawCircle(center, radius, track);
+
+    // 2. Gradient arc — bright orange → pink → red sweep.
+    // Sweep angle: 270° so a quarter of the ring stays empty, giving
+    // the loader a sense of direction (matches the reference).
+    const sweep = 3.0 * 3.141592653589793 / 2; // 270°
+    final rect = Rect.fromCircle(center: center, radius: radius);
+
+    // Use a sweep gradient that rotates with the painter (since the
+    // whole widget is rotated by Transform.rotate). This way the
+    // gradient anchors to the canvas, not to the rotation.
+    final arc = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = _strokeWidth
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: 0,
+        endAngle: 2 * 3.141592653589793,
+        colors: const [
+          Color(0xFFFFA726), // orange-400 (tail)
+          Color(0xFFFF7043), // deep orange
+          Color(0xFFEF5350), // red-400
+          Color(0xFFEC407A), // pink-400 (head)
+          Color(0xFFFFA726), // back to orange so the gradient loops
+        ],
+        stops: const [0.0, 0.30, 0.60, 0.85, 1.0],
+      ).createShader(rect);
+
+    // Start the arc near the top (12 o'clock) — a small negative angle
+    // moves the start point counter-clockwise so the bright head sits
+    // at the leading edge of the sweep.
+    canvas.drawArc(rect, -1.5708, sweep, false, arc);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
