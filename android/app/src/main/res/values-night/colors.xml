@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Dark-mode override of the splash background — same deepest stop
+      (#450A0A red-900) so the icon blends seamlessly regardless of
+      light/dark mode.
+    -->
+    <color name="splash_background">#450A0A</color>
+</resources>

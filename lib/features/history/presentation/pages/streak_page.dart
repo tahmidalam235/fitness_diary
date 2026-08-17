@@ -210,7 +210,7 @@ class _StreakPageState extends State<StreakPage> {
                     child: _MiniStat(
                       label: 'THIS YEAR',
                       value: '${stats.thisYearCount}',
-                      accent: const Color(0xFF22D3EE),
+                      accent: const Color(0xFFF87171),
                     ),
                   ),
                   const Gap(AppSpacing.md),
@@ -218,7 +218,7 @@ class _StreakPageState extends State<StreakPage> {
                     child: _MiniStat(
                       label: 'ALL TIME',
                       value: '${stats.totalCount}',
-                      accent: const Color(0xFFA78BFA),
+                      accent: const Color(0xFF991B1B),
                     ),
                   ),
                 ],

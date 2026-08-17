@@ -125,7 +125,7 @@ class AppOverflowMenu extends StatelessWidget {
                     height: 24,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
+                        colors: [Color(0xFFFCA5A5), Color(0xFFEF4444)],
                       ),
                       borderRadius: BorderRadius.circular(6),
                     ),

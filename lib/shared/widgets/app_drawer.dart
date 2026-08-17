@@ -102,7 +102,7 @@ class AppNavigationRail extends StatelessWidget {
                 borderRadius: BorderRadius.all(Radius.circular(AppRadius.md)),
                 boxShadow: [
                   BoxShadow(
-                    color: Color(0x406366F1),
+                    color: Color(0x40EF4444),
                     blurRadius: 14,
                     offset: Offset(0, 6),
                   ),

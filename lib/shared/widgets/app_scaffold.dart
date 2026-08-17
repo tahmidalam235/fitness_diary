@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/routes/route_paths.dart';
-import '../../core/theme/app_radius.dart';
 import '../../core/theme/app_spacing.dart';
-import '../../core/theme/app_theme.dart';
 import '../responsive/responsive_builder.dart';
 import '../responsive/screen_size.dart';
 import 'app_drawer.dart';
@@ -128,27 +126,17 @@ class AppScaffold extends StatelessWidget {
   }
 
   /// AppBar title widget. When [titleLeadingIcon] is true, prepends the
-  /// branded app logo (from `assets/logo/`) to the title text.
+  /// compact branded app mark (from `assets/logo/`) to the destination
+  /// title text. The mark is rendered directly without a gradient tile
+  /// because the new wordmark logo is self-contained.
   Widget _buildTitle(BuildContext context) {
     if (!titleLeadingIcon) return Text(title);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
+        SizedBox(
           width: 32,
           height: 32,
-          decoration: const BoxDecoration(
-            gradient: AppTheme.heroGradient,
-            borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x406366F1),
-                blurRadius: 8,
-                offset: Offset(0, 4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.all(4),
           child: Image.asset(
             'assets/logo/fitness_diary_compact.png',
             fit: BoxFit.contain,

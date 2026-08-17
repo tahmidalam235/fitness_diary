@@ -114,7 +114,7 @@ class _HistoryComparePageState extends State<HistoryComparePage> {
               Expanded(
                 child: _RangeColumn(
                   range: rangeA,
-                  accentColor: const Color(0xFF3B82F6),
+                  accentColor: const Color(0xFFEF4444),
                 ),
               ),
               const Gap(AppSpacing.md),
@@ -144,7 +144,7 @@ class _CompareHero extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.lg),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7C3AED).withValues(alpha: 0.4),
+            color: const Color(0xFF991B1B).withValues(alpha: 0.4),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),

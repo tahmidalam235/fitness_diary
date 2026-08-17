@@ -80,7 +80,7 @@ class AppAuthField extends StatelessWidget {
                   borderRadius: BorderRadius.all(Radius.circular(AppRadius.sm)),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x406366F1),
+                      color: Color(0x40EF4444),
                       blurRadius: 8,
                       offset: Offset(0, 4),
                     ),
@@ -175,7 +175,7 @@ class AppAuthBrandMark extends StatelessWidget {
           gradient: const LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [AppTheme.brandDark, Color(0xFF1E1B4B)],
+            colors: [AppTheme.brandDark, Color(0xFF450A0A)],
           ),
           borderRadius: BorderRadius.circular(size * 0.28),
           border: Border.all(

@@ -67,7 +67,7 @@ class _FreezePageState extends State<FreezePage> {
                     end: Alignment.bottomRight,
                     colors: [
                       const Color(0xFF60A5FA).withValues(alpha: 0.18),
-                      const Color(0xFF7C3AED).withValues(alpha: 0.12),
+                      const Color(0xFF1E40AF).withValues(alpha: 0.12),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(AppRadius.md),
@@ -87,7 +87,7 @@ class _FreezePageState extends State<FreezePage> {
                           end: Alignment.bottomRight,
                           colors: [
                             Color(0xFF60A5FA),
-                            Color(0xFF7C3AED),
+                            Color(0xFF1E40AF),
                           ],
                         ),
                         borderRadius:
@@ -212,7 +212,7 @@ class _FreezeHero extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: [
             Color(0xFF60A5FA),
-            Color(0xFF7C3AED),
+            Color(0xFF1E40AF),
           ],
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -386,7 +386,7 @@ class _FreezeChip extends StatelessWidget {
                     end: Alignment.bottomRight,
                     colors: [
                       Color(0xFF60A5FA),
-                      Color(0xFF7C3AED),
+                      Color(0xFF1E40AF),
                     ],
                   )
                 : null,
@@ -480,7 +480,7 @@ class _FrozenList extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     Color(0xFF60A5FA),
-                    Color(0xFF7C3AED),
+                    Color(0xFF1E40AF),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -525,7 +525,7 @@ class _FrozenList extends StatelessWidget {
                         end: Alignment.bottomRight,
                         colors: [
                           Color(0xFF60A5FA),
-                          Color(0xFF7C3AED),
+                          Color(0xFF1E40AF),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(AppRadius.sm),

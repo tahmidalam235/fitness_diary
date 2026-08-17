@@ -11,9 +11,9 @@ class AppTheme {
   const AppTheme._();
 
   /// Seed color used to generate the Material 3 color scheme.
-  /// A vivid electric blue that produces a bright, modern palette
+  /// A deep blood-red that produces a premium, energetic palette
   /// with strong contrast and vibrant tonal accents.
-  static const Color _seedColor = Color(0xFF2563EB); // Electric blue
+  static const Color _seedColor = Color(0xFFDC2626); // Blood red
 
   // -- Workout-tuned accent palette ----------------------------------------
 
@@ -23,27 +23,29 @@ class AppTheme {
   /// Lime green — used for completion states, PRs, fresh sessions.
   static const Color limeGreen = Color(0xFF84CC16);
 
-  /// Deep violet — used for premium highlights and "all-time" stats.
-  static const Color deepViolet = Color(0xFF7C3AED);
+  /// Deep crimson — used for premium highlights and "all-time" stats.
+  static const Color deepCrimson = Color(0xFF991B1B);
 
-  /// Cyan accent — used for water/recovery hints and Today-day labels.
-  static const Color accentCyan = Color(0xFF06B6D4);
+  /// Cool ice — used for water/recovery hints and Today-day labels.
+  /// Kept cool/icy so it stays distinct from the warm workout theme.
+  static const Color accentIce = Color(0xFF7DD3FC);
 
   /// Frost blue — used for "frozen" days (rest day / streak protection).
+  /// Kept icy-cool to stay visually distinct from the warm/red theme.
   static const Color frostBlue = Color(0xFF60A5FA);
 
   /// Brand dark surface — used for premium tile backgrounds on auth flows.
-  static const Color brandDark = Color(0xFF0B1020);
+  static const Color brandDark = Color(0xFF1A0000);
 
-  /// Hero gradient — bright, multi-stop, used on banner cards, avatars,
-  /// and CTA buttons. Reads as premium without being garish.
+  /// Hero gradient — blood-red multi-stop, used on banner cards, avatars,
+  /// and CTA buttons. Reads as premium and energetic.
   static const LinearGradient heroGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF22D3EE), // cyan-400
-      Color(0xFF3B82F6), // blue-500
-      Color(0xFF8B5CF6), // violet-500
+      Color(0xFFFCA5A5), // red-300
+      Color(0xFFEF4444), // red-500
+      Color(0xFF991B1B), // red-800
     ],
   );
 
@@ -53,9 +55,9 @@ class AppTheme {
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     colors: [
-      Color(0xFF22D3EE),
-      Color(0xFF3B82F6),
-      Color(0xFF8B5CF6),
+      Color(0xFFFCA5A5),
+      Color(0xFFEF4444),
+      Color(0xFF991B1B),
     ],
   );
 
@@ -81,17 +83,18 @@ class AppTheme {
     ],
   );
 
-  /// Fresh gradient — emerald → cyan, used for completion / "active" stats.
+  /// Fresh gradient — emerald → warm coral, used for completion / "active"
+  /// stats. Now lands in the warm/red family to stay on-palette.
   static const LinearGradient freshGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
       Color(0xFF34D399), // emerald-400
-      Color(0xFF06B6D4), // cyan-500
+      Color(0xFFEF4444), // red-500
     ],
   );
 
-  /// Victory gradient — emerald → lime → cyan, used for PR / "you did it"
+  /// Victory gradient — green → lime → red, used for PR / "you did it"
   /// moments and personal-record badges.
   static const LinearGradient victoryGradient = LinearGradient(
     begin: Alignment.topLeft,
@@ -99,17 +102,18 @@ class AppTheme {
     colors: [
       Color(0xFF22C55E), // green-500
       Color(0xFF84CC16), // lime-500
-      Color(0xFF06B6D4), // cyan-500
+      Color(0xFFEF4444), // red-500
     ],
   );
 
-  /// Deep gradient — violet → indigo, used for dark / premium hero panels.
+  /// Deep gradient — blood-red → near-black-red, used for dark / premium
+  /// hero panels.
   static const LinearGradient deepGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFF7C3AED), // violet-600
-      Color(0xFF312E81), // indigo-900
+      Color(0xFF991B1B), // red-800
+      Color(0xFF450A0A), // red-950
     ],
   );
 

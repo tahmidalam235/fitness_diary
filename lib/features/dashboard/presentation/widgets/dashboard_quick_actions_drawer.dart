@@ -106,7 +106,7 @@ class DashboardQuickActionsDrawer extends StatelessWidget {
                     icon: Icons.calendar_month_rounded,
                     title: l10n.dashboardActionViewCalendar,
                     sub: l10n.dashboardActionViewCalendarSub,
-                    accent: const Color(0xFF3B82F6),
+                    accent: theme.colorScheme.primary,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.pushNamed(RouteNames.calendar);
@@ -117,7 +117,7 @@ class DashboardQuickActionsDrawer extends StatelessWidget {
                     icon: Icons.style_rounded,
                     title: l10n.dashboardActionBrowseSessions,
                     sub: l10n.dashboardActionBrowseSessionsSub,
-                    accent: const Color(0xFF8B5CF6),
+                    accent: theme.colorScheme.primary,
                     onTap: () {
                       Navigator.of(context).pop();
                       context.pushNamed(RouteNames.sessions);

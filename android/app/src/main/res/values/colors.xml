@@ -1,4 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ic_launcher_background">#0F1226</color>
+    <color name="ic_launcher_background">#991B1B</color>
+    <!--
+      Android 12+ splash screen background. Matches the deepest stop
+      (#450A0A red-900) of the gradient baked into android12splash.png
+      so the circular icon mask blends seamlessly with the surrounding
+      background — the gradient effectively extends across the whole
+      screen.
+    -->
+    <color name="splash_background">#450A0A</color>
 </resources>

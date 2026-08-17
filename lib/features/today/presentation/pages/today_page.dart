@@ -580,7 +580,7 @@ class _FrozenBanner extends StatelessWidget {
         gradient: LinearGradient(
           colors: [
             AppTheme.frostBlue.withValues(alpha: 0.18),
-            AppTheme.accentCyan.withValues(alpha: 0.12),
+            AppTheme.accentIce.withValues(alpha: 0.12),
           ],
         ),
         border: Border(

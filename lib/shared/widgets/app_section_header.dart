@@ -130,7 +130,7 @@ class AppTintedIconTile extends StatelessWidget {
     super.key,
     required this.icon,
     this.size = 36,
-    this.color = const Color(0xFF2563EB),
+    this.color = const Color(0xFFEF4444),
     this.backgroundOpacity = 0.14,
     this.borderOpacity = 0.3,
     this.iconSize,
@@ -143,7 +143,7 @@ class AppTintedIconTile extends StatelessWidget {
     required this.tint,
     this.size = 36,
     this.iconSize,
-  }) : color = const Color(0xFF2563EB),
+  }) : color = const Color(0xFFEF4444),
        backgroundOpacity = 0,
        borderOpacity = 0,
        outlineColor = null;
@@ -155,7 +155,7 @@ class AppTintedIconTile extends StatelessWidget {
     this.size = 36,
     this.iconSize,
     required this.outlineColor,
-  }) : color = const Color(0xFF2563EB),
+  }) : color = const Color(0xFFEF4444),
        backgroundOpacity = 0,
        borderOpacity = 0,
        tint = null;

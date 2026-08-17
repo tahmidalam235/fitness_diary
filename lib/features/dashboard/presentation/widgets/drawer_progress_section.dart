@@ -432,7 +432,7 @@ class _ExpandedBody extends StatelessWidget {
                 child: _MiniStat(
                   label: 'THIS YEAR',
                   value: '${data.thisYearCount}',
-                  accent: const Color(0xFF22D3EE),
+                  accent: const Color(0xFFF87171),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -440,7 +440,7 @@ class _ExpandedBody extends StatelessWidget {
                 child: _MiniStat(
                   label: 'ALL TIME',
                   value: '${data.totalCount}',
-                  accent: const Color(0xFFA78BFA),
+                  accent: const Color(0xFF991B1B),
                 ),
               ),
             ],
