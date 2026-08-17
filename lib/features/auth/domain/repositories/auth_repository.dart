@@ -51,4 +51,12 @@ abstract class AuthRepository {
   /// Returns the persisted session id, or null if no user is signed
   /// in on this device.
   Future<Either<Failure, int?>> currentUserId();
+
+  /// Reads the persisted account for the currently signed-in Firebase
+  /// user (if any). Returns the [AuthUser] populated with the values
+  /// originally written at signup — username and account creation
+  /// timestamp — so the profile screen can display them across cold
+  /// starts without re-prompting for credentials. Returns null when
+  /// no Firebase user is signed in.
+  Future<Either<Failure, AuthUser?>> restoreSession();
 }

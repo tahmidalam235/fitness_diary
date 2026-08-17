@@ -6,6 +6,11 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- Required on Android 13+ (API 33+) to actually POST a notification
+         to the user. The runtime permission is requested via
+         `requestNotificationsPermission()` in NotificationService, but the
+         manifest entry must be present for the OS to allow the dialog. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="fitness_diary"
         android:name="${applicationName}"

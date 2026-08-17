@@ -183,11 +183,29 @@ class AuthRepositoryImpl implements AuthRepository {
         );
       }
 
+      // Pull the original signup timestamp from the Firestore user
+      // doc so "Member since" stays anchored to account creation,
+      // not the moment of this login. Falls back to Firebase Auth's
+      // own metadata.creationTime (also set at account creation)
+      // if the Firestore doc is missing for any reason.
+      DateTime? createdAt;
+      try {
+        final userDoc =
+            await _firestore.collection('users').doc(user.uid).get();
+        final stored = userDoc.data()?['createdAt'];
+        if (stored is Timestamp) {
+          createdAt = stored.toDate();
+        }
+      } on FirebaseException catch (e) {
+        debugPrint('login: Firestore lookup failed (${e.code})');
+      }
+      createdAt ??= user.metadata.creationTime;
+
       return Right(
         AuthUser(
           id: user.uid.hashCode,
           username: username.trim(),
-          createdAt: DateTime.now(),
+          createdAt: createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
         ),
       );
     } on FirebaseAuthException catch (e) {
@@ -325,6 +343,55 @@ class AuthRepositoryImpl implements AuthRepository {
       // Hash the uid so the rest of the app — which still treats the
       // id as an int SQLite-style key — keeps working unchanged.
       return Right(user.uid.hashCode);
+    } catch (e) {
+      return Left(UnexpectedFailure(cause: e, message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthUser?>> restoreSession() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return const Right(null);
+
+      // Prefer the values originally written at signup (Firestore
+      // `users/{uid}` doc) — those match the username the user typed
+      // when registering and the server-side `createdAt` timestamp,
+      // so "Member since" stays stable across logins and cold starts.
+      // Falls back to Firebase Auth's own metadata / email local-part
+      // if the Firestore doc is missing for any reason.
+      String username = '';
+      DateTime? createdAt;
+      try {
+        final userDoc = await _firestore.collection('users').doc(user.uid).get();
+        final data = userDoc.data();
+        if (data != null) {
+          final storedUsername = data['username'];
+          if (storedUsername is String && storedUsername.isNotEmpty) {
+            username = storedUsername;
+          }
+          final storedCreatedAt = data['createdAt'];
+          if (storedCreatedAt is Timestamp) {
+            createdAt = storedCreatedAt.toDate();
+          }
+        }
+      } on FirebaseException catch (e) {
+        // Permission / unavailable — fall through to metadata fallback.
+        debugPrint('restoreSession: Firestore lookup failed (${e.code})');
+      }
+
+      username = username.isNotEmpty
+          ? username
+          : (user.email?.split('@').first ?? '');
+      createdAt ??= user.metadata.creationTime;
+
+      return Right(
+        AuthUser(
+          id: user.uid.hashCode,
+          username: username,
+          createdAt: createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+        ),
+      );
     } catch (e) {
       return Left(UnexpectedFailure(cause: e, message: e.toString()));
     }

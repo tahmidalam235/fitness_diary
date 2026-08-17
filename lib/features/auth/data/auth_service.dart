@@ -29,19 +29,15 @@ class AuthService extends ChangeNotifier {
   /// True iff a user is signed in on this device.
   bool get isSignedIn => _currentUser != null;
 
-  /// Reads the persisted session id (if any) so the router knows
-  /// the initial auth state before the user taps anything.
+  /// Reads the persisted session (if any) so the router knows the
+  /// initial auth state before the user taps anything. Pulls the
+  /// full account profile — username and creation timestamp — from
+  /// the repository so the Profile screen reflects the values the
+  /// user registered with, even across cold starts.
   Future<void> load() async {
     if (_loaded) return;
-    final idResult = await _repository.currentUserId();
-    final id = idResult.getOrElse((_) => null);
-    if (id != null) {
-      _currentUser = AuthUser(
-        id: id,
-        username: '',
-        createdAt: DateTime.fromMillisecondsSinceEpoch(0),
-      );
-    }
+    final sessionResult = await _repository.restoreSession();
+    _currentUser = sessionResult.getOrElse((_) => null);
     _loaded = true;
     notifyListeners();
   }

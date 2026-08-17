@@ -192,10 +192,14 @@ class NotificationService {
           '(next: $next, mode: $scheduleMode, zone: ${tz.local.name})',
         );
       }
-    } catch (e) {
+    } catch (e, st) {
       if (kDebugMode) {
-        debugPrint('[NotificationService] schedule error: $e');
+        debugPrint('[NotificationService] schedule error: $e\n$st');
       }
+      // Re-throw so callers (e.g. the settings page) can surface a
+      // visible failure rather than silently swallowing the error and
+      // leaving the user wondering why their reminder never fires.
+      rethrow;
     }
   }
 
@@ -251,7 +255,7 @@ class NotificationService {
       if (kDebugMode) {
         debugPrint('[NotificationService] test failed: permission denied');
       }
-      return;
+      throw Exception('Notification permission denied');
     }
 
     // We use .show() for an immediate test notification instead of

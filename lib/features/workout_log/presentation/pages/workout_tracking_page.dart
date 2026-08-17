@@ -167,31 +167,14 @@ class _BodyState extends State<_Body> {
               ),
               onPressed: canSave
                   ? () {
-                      // Mirror the just-edited values into the workout
-                      // template (defaults) so the Session card reflects
-                      // them on return. Otherwise the entry's edits
-                      // only land in today's WorkoutLog row and the
-                      // session's WorkoutCard stays stale.
-                      // `canSave` ensures entry is non-null here.
-                      final entry = state.entry!;
-                      final w = state.workout;
-                      context.read<WorkoutListBloc>().add(
-                        UpdateWorkoutEvent(
-                          id: w.id,
-                          exerciseName: w.exerciseName,
-                          defaultSets: entry.sets ?? w.defaultSets,
-                          defaultReps: entry.reps ?? w.defaultReps,
-                          defaultDurationSeconds:
-                              entry.durationSeconds ?? w.defaultDurationSeconds,
-                          defaultWeight: entry.weight ?? w.defaultWeight,
-                          notes: w.notes,
-                          // Use the body-part picked on this screen (if
-                          // the user changed it), otherwise carry the
-                          // template value through unchanged.
-                          targetedBodyPart:
-                              _selectedBodyPart ?? w.targetedBodyPart,
-                        ),
-                      );
+                      // Every field on this screen already dispatches
+                      // `UpsertTodayEntryEvent` on each change, so today's
+                      // WorkoutLogEntry is the single source of truth for
+                      // Today's edits. The Session's Workout template
+                      // must stay untouched here — editing from the
+                      // Today page never mutates the original Session
+                      // workout; that's reserved for edits made from the
+                      // Session page itself.
                       context.pop();
                     }
                   : null,
@@ -571,9 +554,9 @@ class _TrackingCard extends StatelessWidget {
             ),
             const Gap(AppSpacing.md),
             // Targeted Body Part field — tapping opens the bottom-sheet
-            // picker. Selection is held in `_BodyState`; on ✓ save it
-            // is forwarded to `UpdateWorkoutEvent.targetedBodyPart` so
-            // the workout template (and Session card) reflects it.
+            // picker. The selection is held in `_BodyState` for display
+            // in the hero header; it is intentionally NOT propagated to
+            // the Session's Workout template from this screen.
             Material(
               color: theme.colorScheme.surfaceContainerHighest
                   .withValues(alpha: 0.55),

@@ -11,6 +11,20 @@ import '../../data/notification_service.dart';
 import '../../data/settings_service.dart';
 import '../../data/theme_service.dart';
 
+/// Show a snackbar in the Settings screen.
+void _showSnack(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+}
+
+/// Shared copy for any failure scheduling a daily reminder.
+void _showScheduleErrorSnack(BuildContext context) {
+  _showSnack(
+    context,
+    'Could not schedule reminder. Make sure notifications and exact '
+    'alarms are enabled in system settings.',
+  );
+}
+
 /// App Settings. Toggles for theme mode, weight units, and notifications.
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -80,8 +94,33 @@ class SettingsPage extends StatelessWidget {
                     onChanged: (v) async {
                       if (v) {
                         final ok = await notifySvc.requestPermission();
-                        if (!ok) return;
-                        await notifySvc.scheduleDaily(settingsSvc.reminderTime);
+                        if (!ok) {
+                          // Persist the user's intent even when permission
+                          // is denied so the toggle reflects the request;
+                          // the snackbar tells them why nothing scheduled.
+                          await settingsSvc.setNotifications(v);
+                          if (context.mounted) {
+                            _showSnack(
+                              context,
+                              'Notifications permission denied. Enable it in '
+                              'system settings to receive reminders.',
+                            );
+                          }
+                          return;
+                        }
+                        try {
+                          await notifySvc.scheduleDaily(
+                            settingsSvc.reminderTime,
+                          );
+                        } catch (e, st) {
+                          debugPrint(
+                            '[SettingsPage] scheduleDaily failed: $e\n$st',
+                          );
+                          if (context.mounted) _showScheduleErrorSnack(context);
+                          // Revert the toggle so the UI matches the OS state.
+                          await settingsSvc.setNotifications(false);
+                          return;
+                        }
                       } else {
                         await notifySvc.cancelDaily();
                       }
@@ -101,7 +140,16 @@ class SettingsPage extends StatelessWidget {
                       if (picked != null) {
                         await settingsSvc.setReminderTime(picked);
                         if (settingsSvc.notifications) {
-                          await notifySvc.scheduleDaily(picked);
+                          try {
+                            await notifySvc.scheduleDaily(picked);
+                          } catch (e, st) {
+                            debugPrint(
+                              '[SettingsPage] scheduleDaily failed: $e\n$st',
+                            );
+                            if (context.mounted) {
+                              _showScheduleErrorSnack(context);
+                            }
+                          }
                         }
                       }
                     },
@@ -111,7 +159,26 @@ class SettingsPage extends StatelessWidget {
                     label: 'Test Notification',
                     icon: Icons.send_rounded,
                     value: 'Send now',
-                    onTap: () => notifySvc.sendTestNotification(),
+                    onTap: () async {
+                      try {
+                        await notifySvc.sendTestNotification();
+                        if (context.mounted) {
+                          _showSnack(context, 'Test notification sent');
+                        }
+                      } catch (e, st) {
+                        debugPrint(
+                          '[SettingsPage] sendTestNotification failed: '
+                          '$e\n$st',
+                        );
+                        if (context.mounted) {
+                          _showSnack(
+                            context,
+                            'Test notification failed. Make sure '
+                            'notifications are enabled in system settings.',
+                          );
+                        }
+                      }
+                    },
                   ),
                 ],
               ),
