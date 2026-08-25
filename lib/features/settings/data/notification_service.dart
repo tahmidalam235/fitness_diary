@@ -79,39 +79,63 @@ class NotificationService {
 
   /// Asks the OS for notification permission. Returns true if the
   /// user granted (or already had) permission; false otherwise.
-  /// Safe to call on every toggle — the OS will no-op if already
-  /// resolved.
+  ///
+  /// On Android 13+, this requests the POST_NOTIFICATIONS permission.
+  /// This does NOT request exact alarm permissions; use
+  /// [requestExactPermission] for that.
   Future<bool> requestPermission() async {
-    final ios = _plugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >();
-    if (ios != null) {
-      final granted = await ios.requestPermissions(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
-      if (granted == false) return false;
+    try {
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      if (ios != null) {
+        final granted = await ios.requestPermissions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+        return granted ?? false;
+      }
+
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      if (android != null) {
+        final granted = await android.requestNotificationsPermission();
+        return granted ?? false;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('[NotificationService] requestPermission error: $e');
+      }
+      // Report failure so the caller can revert the toggle.
+      return false;
     }
 
+    return true;
+  }
+
+  /// Asks the user to grant exact alarm permission on Android 12+.
+  /// Opens the system settings screen.
+  Future<void> requestExactPermission() async {
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (android != null) {
-      final granted = await android.requestNotificationsPermission();
-      if (granted == false) return false;
-
-      // Android 12+ — exact alarms need their own permission. The
-      // plugin's `requestExactAlarmsPermission` opens the system
-      // settings screen; the user has to flip the toggle manually
-      // for "Alarms & reminders". We call it once and proceed even
-      // if it's denied — scheduleDaily() will fall back to inexact.
-      await android.requestExactAlarmsPermission();
+      try {
+        final canExact = await android.canScheduleExactNotifications();
+        if (canExact != true) {
+          await android.requestExactAlarmsPermission();
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          debugPrint('[NotificationService] requestExactPermission error: $e');
+        }
+      }
     }
-
-    return true;
   }
 
   /// Whether the OS currently allows exact-time alarms. False means
@@ -208,13 +232,31 @@ class NotificationService {
   Future<void> _updateLocalTimezone() async {
     try {
       final name = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(name));
+      // Some OEM ROMs return an empty or whitespace-only string on a
+      // cold first launch. Without this guard, tz.getLocation("") would
+      // throw inside the catch and we'd silently fall back to UTC,
+      // making the alarm fire at the wrong wall-clock hour.
+      if (name.trim().isEmpty) {
+        if (kDebugMode) {
+          debugPrint(
+            '[NotificationService] empty timezone name; '
+            'falling back to UTC',
+          );
+        }
+        tz.setLocalLocation(tz.UTC);
+        return;
+      }
+      final location = tz.getLocation(name);
+      tz.setLocalLocation(location);
     } catch (e) {
       if (kDebugMode) {
         debugPrint(
-          '[NotificationService] failed to resolve local timezone: $e',
+          '[NotificationService] failed to resolve local timezone ($e); '
+          'falling back to UTC',
         );
       }
+      // Fallback to UTC if resolution fails to prevent crashes.
+      tz.setLocalLocation(tz.UTC);
     }
   }
 

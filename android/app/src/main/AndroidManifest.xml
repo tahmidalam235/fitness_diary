@@ -4,7 +4,13 @@
          silently drops scheduled alarms and the "Alarms & reminders"
          toggle in Settings is rendered disabled. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+    <!-- Android 13+ (API 33+) — pre-granted use of exact alarms for the
+         "Alarms & reminders" category. SCHEDULE_EXACT_ALARM alone only
+         surfaces the user-toggle flow; USE_EXACT_ALARM is what
+         auto-grants on fresh installs of the release APK. -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM"/>
+    <!-- Re-arms scheduled notifications after a reboot. Required by
+         flutter_local_notifications' ScheduledNotificationBootReceiver. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Required on Android 13+ (API 33+) to actually POST a notification
          to the user. The runtime permission is requested via

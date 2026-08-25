@@ -35,6 +35,20 @@ android {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
+
+            // Explicit minify + shrink for the Firebase App Distribution
+            // APK. flutter_local_notifications loads its Android
+            // implementation and Gson-serialised payloads reflectively;
+            // without these flags (and the matching proguard-rules.pro
+            // keep rules) the plugin's manifest receivers get renamed,
+            // the platform channel can't bind, and scheduled reminders
+            // / test notifications silently fail to fire on release.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }

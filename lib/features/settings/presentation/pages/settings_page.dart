@@ -93,22 +93,28 @@ class SettingsPage extends StatelessWidget {
                     value: settingsSvc.notifications,
                     onChanged: (v) async {
                       if (v) {
-                        final ok = await notifySvc.requestPermission();
-                        if (!ok) {
-                          // Persist the user's intent even when permission
-                          // is denied so the toggle reflects the request;
-                          // the snackbar tells them why nothing scheduled.
-                          await settingsSvc.setNotifications(v);
-                          if (context.mounted) {
-                            _showSnack(
-                              context,
-                              'Notifications permission denied. Enable it in '
-                              'system settings to receive reminders.',
-                            );
-                          }
-                          return;
-                        }
                         try {
+                          final ok = await notifySvc.requestPermission();
+                          if (!ok) {
+                            if (context.mounted) {
+                              _showSnack(
+                                context,
+                                'Notifications permission denied. Enable it in '
+                                'system settings to receive reminders.',
+                              );
+                            }
+                            return;
+                          }
+
+                          // Granting notification permission was successful.
+                          // Proceed to persist intent and schedule.
+                          await settingsSvc.setNotifications(true);
+
+                          // Request exact alarm permission (Android 12+).
+                          // This opens a settings screen; we call it after
+                          // updating the toggle so the UI doesn't get stuck.
+                          await notifySvc.requestExactPermission();
+
                           await notifySvc.scheduleDaily(
                             settingsSvc.reminderTime,
                           );
@@ -117,14 +123,16 @@ class SettingsPage extends StatelessWidget {
                             '[SettingsPage] scheduleDaily failed: $e\n$st',
                           );
                           if (context.mounted) _showScheduleErrorSnack(context);
-                          // Revert the toggle so the UI matches the OS state.
                           await settingsSvc.setNotifications(false);
-                          return;
                         }
                       } else {
-                        await notifySvc.cancelDaily();
+                        try {
+                          await notifySvc.cancelDaily();
+                          await settingsSvc.setNotifications(false);
+                        } catch (e) {
+                          debugPrint('[SettingsPage] cancelDaily failed: $e');
+                        }
                       }
-                      await settingsSvc.setNotifications(v);
                     },
                   ),
                   const Divider(height: 1, indent: 56),
@@ -161,6 +169,16 @@ class SettingsPage extends StatelessWidget {
                     value: 'Send now',
                     onTap: () async {
                       try {
+                        final ok = await notifySvc.requestPermission();
+                        if (!ok) {
+                          if (context.mounted) {
+                            _showSnack(
+                              context,
+                              'Notifications permission denied.',
+                            );
+                          }
+                          return;
+                        }
                         await notifySvc.sendTestNotification();
                         if (context.mounted) {
                           _showSnack(context, 'Test notification sent');
@@ -362,9 +380,7 @@ class _ActionRow extends StatelessWidget {
               vertical: 2,
             ),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primaryContainer.withValues(
-                alpha: 0.55,
-              ),
+              color: theme.colorScheme.primaryContainer.withValues(alpha: 0.55),
               borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
             child: Text(

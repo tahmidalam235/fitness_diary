@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 
 import '../../features/auth/data/auth_repository_impl.dart';
@@ -90,6 +91,20 @@ Future<void> setupInjection() async {
   await getIt<ThemeService>().load();
   await getIt<ProfileService>().load();
   await getIt<NotificationService>().init();
+
+  // Best-effort re-arm: AlarmManager state may have been wiped externally
+  // (force-stop, OEM battery saver, fresh Gmail install) between launches.
+  final settingsSvc = getIt<SettingsService>();
+  final notifySvc = getIt<NotificationService>();
+  if (settingsSvc.notifications) {
+    try {
+      await notifySvc.scheduleDaily(settingsSvc.reminderTime);
+    } catch (e, st) {
+      if (kDebugMode) {
+        debugPrint('[injection] startup re-arm failed: $e\n$st');
+      }
+    }
+  }
 }
 
 /// Static registration helpers. Manual (no build_runner) so the
