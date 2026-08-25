@@ -112,12 +112,22 @@ class _WorkoutFormView extends StatelessWidget {
     final state = bloc.state;
     final messenger = ScaffoldMessenger.of(context);
     if (state is WorkoutListError) {
+      // The data source throws a `ValidationException` when the user
+      // tries to add a workout whose name matches an existing one in
+      // this session; the repository then wraps it in a
+      // `DatabaseException`. Detect that specific case and show a clean
+      // user-facing message instead of the technical stack.
+      final isDuplicate = state.failure.message.contains('already exists');
       messenger
         ..clearSnackBars()
         ..showSnackBar(
           SnackBar(
-            content: Text('Could not save workout:\n${state.failure.message}'),
-            duration: const Duration(seconds: 8),
+            content: Text(
+              isDuplicate
+                  ? 'This workout already exists in this session.'
+                  : 'Could not save workout:\n${state.failure.message}',
+            ),
+            duration: Duration(seconds: isDuplicate ? 4 : 8),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),

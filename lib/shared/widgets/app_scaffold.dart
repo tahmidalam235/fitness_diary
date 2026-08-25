@@ -98,9 +98,8 @@ class AppScaffold extends StatelessWidget {
   /// the back arrow always does something meaningful, even on top-level
   /// routes reached via `context.go(...)`.
   void _handleBack(BuildContext context) {
-    final navigator = Navigator.of(context);
-    if (navigator.canPop()) {
-      navigator.pop();
+    if (context.canPop()) {
+      context.pop();
       return;
     }
 
