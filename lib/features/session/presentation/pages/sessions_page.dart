@@ -78,10 +78,20 @@ class _SessionsViewState extends State<_SessionsView> {
       title: l10n.sessionsTitle,
       useNavigationRail: true,
       titleLeadingIcon: true,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushNamed(RouteNames.sessionNew),
-        icon: const Icon(Icons.add_rounded),
-        label: Text(l10n.sessionsFabNew.toUpperCase()),
+      floatingActionButton: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
+          // The empty state in the body already surfaces the "CREATE
+          // SESSION" CTA, so suppress the FAB while there are no
+          // sessions to avoid a duplicate.
+          if (state is SessionLoaded && state.sessions.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return FloatingActionButton.extended(
+            onPressed: () => context.pushNamed(RouteNames.sessionNew),
+            icon: const Icon(Icons.add_rounded),
+            label: Text(l10n.sessionsFabNew.toUpperCase()),
+          );
+        },
       ),
       body: BlocConsumer<SessionBloc, SessionState>(
         listenWhen: (prev, curr) =>

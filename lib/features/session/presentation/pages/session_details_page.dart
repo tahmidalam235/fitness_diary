@@ -238,10 +238,19 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
                 IconButton(
                   tooltip: l10n.commonEdit,
                   icon: const Icon(Icons.edit_rounded),
-                  onPressed: () => context.pushNamed(
-                    RouteNames.sessionEdit,
-                    pathParameters: {'id': loaded.id.toString()},
-                  ),
+                  onPressed: () async {
+                    await context.pushNamed(
+                      RouteNames.sessionEdit,
+                      pathParameters: {'id': loaded.id.toString()},
+                    );
+                    // The edit form runs its own SessionBloc (DI factory),
+                    // so its update doesn't propagate here. Re-fetch on
+                    // return so the hero header reflects the new name.
+                    if (!context.mounted) return;
+                    context.read<SessionBloc>().add(
+                          GetSessionByIdEvent(loaded.id!),
+                        );
+                  },
                 ),
                 IconButton(
                   tooltip: l10n.commonDelete,
@@ -284,6 +293,12 @@ class _SessionDetailsViewState extends State<_SessionDetailsView> {
       floatingActionButton: BlocBuilder<WorkoutListBloc, WorkoutListState>(
         builder: (context, state) {
           if (state is! WorkoutListLoaded) {
+            return const SizedBox.shrink();
+          }
+          // The empty state in the body already surfaces the "Add
+          // Workout" CTA, so suppress the FAB while the session has no
+          // workouts to avoid a duplicate.
+          if (state.workouts.isEmpty) {
             return const SizedBox.shrink();
           }
           return FloatingActionButton.extended(

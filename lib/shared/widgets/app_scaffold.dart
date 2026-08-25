@@ -138,7 +138,7 @@ class AppScaffold extends StatelessWidget {
           width: 32,
           height: 32,
           child: Image.asset(
-            'assets/logo/fitness_diary_compact.png',
+            'assets/logo/fitness_diary_notebook.png',
             fit: BoxFit.contain,
           ),
         ),

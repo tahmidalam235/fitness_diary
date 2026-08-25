@@ -181,7 +181,7 @@ class _TodayPageState extends State<TodayPage> {
                             title: l10n.todayEmptyTitle,
                             message: l10n.todayEmptyMessage,
                             icon: Icons.play_circle_outline_rounded,
-                            actionLabel: l10n.todayEmptyAction,
+                            actionLabel: 'SELECT SESSION',
                             onAction: () =>
                                 setState(() => _isPickingSession = true),
                           ),
@@ -225,28 +225,14 @@ class _TodayPageState extends State<TodayPage> {
                                   title: l10n.todayEmptyTitle,
                                   message: l10n.todayEmptyMessage,
                                   icon: Icons.play_circle_outline_rounded,
-                                  actionLabel: l10n.todayEmptyAction,
+                                  actionLabel: 'SELECT SESSION',
                                   onAction: () => setState(
                                     () => _isPickingSession = true,
                                   ),
                                 ),
                               );
                             }
-                            // Fix 5: each session gets its OWN
-                            // BlocProvider<TodayWorkoutsBloc> nested
-                            // INSIDE its _SessionSection. The previous
-                            // shape wrapped every section in a single
-                            // MultiBlocProvider above the Column, which
-                            // nests the providers in declaration order
-                            // (P1 → P2 → P3 → Column). A
-                            // BlocBuilder<TodayWorkoutsBloc> lookup in
-                            // any section then walked up and found the
-                            // INNERMOST provider (the last log's bloc),
-                            // so every section rendered with that one
-                            // bloc's data — workouts from one session
-                            // visibly appearing under another's section
-                            // header. Moving the provider inside the
-                            // section makes the lookup unambiguous.
+
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
@@ -256,40 +242,42 @@ class _TodayPageState extends State<TodayPage> {
                                     log: log,
                                     allSessions: sessions,
                                   ),
+                                const Gap(AppSpacing.md),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: AppSpacing.lg,
+                                  ),
+                                  child: OutlinedButton.icon(
+                                    onPressed: () => setState(
+                                      () => _isPickingSession = true,
+                                    ),
+                                    icon: const Icon(Icons.add_rounded),
+                                    label: Text(
+                                      (state is SessionLoaded &&
+                                              state.sessions.isEmpty)
+                                          ? 'Add Session for Today'
+                                          : 'Add More Session for Today',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: AppSpacing.md,
+                                      ),
+                                      side: BorderSide(
+                                        color: theme.colorScheme.primary
+                                            .withValues(alpha: 0.5),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(
+                                          AppRadius.md,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               ],
                             );
                           },
                         ),
-                      const Gap(AppSpacing.md),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.lg,
-                        ),
-                        child: OutlinedButton.icon(
-                          onPressed: () =>
-                              setState(() => _isPickingSession = true),
-                          icon: const Icon(Icons.add_rounded),
-                          label: Text(
-                            (state is SessionLoaded && state.sessions.isEmpty)
-                                ? 'Add Session for Today'
-                                : 'Add More Session for Today',
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              vertical: AppSpacing.md,
-                            ),
-                            side: BorderSide(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.5),
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                AppRadius.md,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -663,7 +651,10 @@ class _SessionPicker extends StatelessWidget {
         actionLabel: l10n.sessionsEmptyAction,
         onAction: () {
           onClear(); // This will set _isPickingSession to false in TodayPage
-          context.pushNamed(RouteNames.sessionNew);
+          context.pushNamed(
+            RouteNames.sessionNew,
+            queryParameters: {'afterCreate': 'details'},
+          );
         },
       );
     }
@@ -696,6 +687,30 @@ class _SessionPicker extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm),
           ],
+          const SizedBox(height: AppSpacing.sm),
+          OutlinedButton.icon(
+            onPressed: () {
+              onClear();
+              context.pushNamed(
+                RouteNames.sessionNew,
+                queryParameters: {'afterCreate': 'details'},
+              );
+            },
+            icon: const Icon(Icons.add_rounded),
+            label: Text(l10n.sessionsFabNew),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+              side: BorderSide(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.5),
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+            ),
+          ),
         ],
       ),
     );

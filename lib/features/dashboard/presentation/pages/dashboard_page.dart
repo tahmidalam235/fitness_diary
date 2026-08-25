@@ -159,10 +159,13 @@ class _DashboardViewState extends State<_DashboardView> {
               children: [
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Icon(
-                    Icons.fitness_center_rounded,
-                    size: 32,
-                    color: theme.colorScheme.primary,
+                  child: SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: Image.asset(
+                      'assets/logo/fitness_diary_notebook.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
                 const Gap(AppSpacing.lg),

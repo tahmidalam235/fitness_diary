@@ -144,7 +144,9 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: RoutePaths.sessionNew,
           name: RouteNames.sessionNew,
-          builder: (_, _) => const SessionFormPage(),
+          builder: (_, state) => SessionFormPage(
+            afterCreateAction: state.uri.queryParameters['afterCreate'],
+          ),
         ),
         GoRoute(
           path: RoutePaths.sessionDetails,
