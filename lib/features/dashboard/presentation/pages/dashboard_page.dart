@@ -19,6 +19,7 @@ import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
 import '../../../session/presentation/bloc/session_state.dart';
+import '../../../workout_log/data/models/workout_log_model.dart';
 
 /// Vibrant, data-driven dashboard. Built from reactive `SessionBloc` for
 /// the session list and a lightweight stats loader for workout log totals,
@@ -105,10 +106,36 @@ class _DashboardViewState extends State<_DashboardView> {
         0,
         (sum, e) => sum + (e.sets ?? 0),
       );
+
+      // Per-session "last picked for today" timestamp used to order
+      // Recent Activity. Entry.createdAt is set on upload, so it
+      // reflects when the user actually selected that workout from
+      // the session-details picker (or its equivalent). Fall back to
+      // updatedAt for legacy rows missing a createdAt.
+      final logByFid = <String, WorkoutLogModel>{
+        for (final log in allLogs)
+          if (log.firestoreId != null) log.firestoreId!: log,
+      };
+      final lastPickedAtBySession = <int, DateTime>{};
+      for (final entry in liveEntries) {
+        final logFid = entry.workoutLogFirestoreId;
+        if (logFid == null) continue;
+        final log = logByFid[logFid];
+        if (log == null || log.sessionFirestoreId == null) continue;
+        final ts = entry.createdAt ?? entry.updatedAt;
+        if (ts == null) continue;
+        final sessionId = log.sessionId;
+        final prev = lastPickedAtBySession[sessionId];
+        if (prev == null || ts.isAfter(prev)) {
+          lastPickedAtBySession[sessionId] = ts;
+        }
+      }
+
       return _DashboardStats(
         sessionsThisWeek: last7.length,
         totalWorkouts: liveEntries.length,
         totalSets: totalSets,
+        lastPickedAtBySession: lastPickedAtBySession,
       );
     }
 
@@ -157,18 +184,6 @@ class _DashboardViewState extends State<_DashboardView> {
                 AppSpacing.xxl,
               ),
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: Image.asset(
-                      'assets/logo/fitness_diary_notebook.png',
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-                const Gap(AppSpacing.lg),
                 _KpiRow(stats: stats, l10n: l10n, theme: theme),
                 const Gap(AppSpacing.xl),
                 _RecentActivitySection(
@@ -191,10 +206,15 @@ class _DashboardStats {
     required this.sessionsThisWeek,
     required this.totalWorkouts,
     required this.totalSets,
+    required this.lastPickedAtBySession,
   });
   final int sessionsThisWeek;
   final int totalWorkouts;
   final int totalSets;
+
+  /// Per-session id → most recent "workout picked for today" timestamp.
+  /// Drives the Recent Activity sort order on the Dashboard.
+  final Map<int, DateTime> lastPickedAtBySession;
 }
 
 // ============================================================================
@@ -351,7 +371,10 @@ class _RecentActivitySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final recent = _recent(sessions, stats?.totalWorkouts ?? 0);
+    final recent = _recent(
+      sessions,
+      stats?.lastPickedAtBySession ?? const <int, DateTime>{},
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -380,8 +403,23 @@ class _RecentActivitySection extends StatelessWidget {
     );
   }
 
-  List<_RecentItem> _recent(List<Session> sessions, int totalWorkouts) {
+  List<_RecentItem> _recent(
+    List<Session> sessions,
+    Map<int, DateTime> lastPickedAtBySession,
+  ) {
     if (sessions.isEmpty) return const [];
+    // Order by most recent "picked for today" timestamp descending so
+    // the session the user just selected sits on top. Sessions that
+    // have never been picked fall to the end in their natural order.
+    final ordered = [...sessions];
+    ordered.sort((a, b) {
+      final ta = a.id == null ? null : lastPickedAtBySession[a.id];
+      final tb = b.id == null ? null : lastPickedAtBySession[b.id];
+      if (ta == null && tb == null) return 0;
+      if (ta == null) return 1;
+      if (tb == null) return -1;
+      return tb.compareTo(ta);
+    });
     final out = <_RecentItem>[];
     // Cycle through three bright accent gradients so the list feels alive.
     final accents = <LinearGradient>[
@@ -389,8 +427,8 @@ class _RecentActivitySection extends StatelessWidget {
       AppTheme.warmGradient,
       AppTheme.heroGradient,
     ];
-    for (var i = 0; i < sessions.take(4).length; i++) {
-      final s = sessions[i];
+    for (var i = 0; i < ordered.take(4).length; i++) {
+      final s = ordered[i];
       final accent = accents[i % accents.length];
       out.add(
         _RecentItem(

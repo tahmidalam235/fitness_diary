@@ -313,7 +313,10 @@ extension InjectionConfig on GetIt {
 
   void registerCalendarFeature() {
     registerFactory<CalendarBloc>(
-      () => CalendarBloc(watchLogsInRange: getIt()),
+      () => CalendarBloc(
+        watchLogsInRange: getIt(),
+        workoutLogDao: getIt(),
+      ),
     );
     registerFactory<DailyDetailsBloc>(
       () => DailyDetailsBloc(

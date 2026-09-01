@@ -14,7 +14,9 @@ import '../../../../core/theme/app_spacing.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
+import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../features/history/domain/usecases/watch_frozen_days.dart';
+import '../../../../features/workout_log/data/models/workout_log_model.dart';
 import '../../../../features/history/domain/usecases/watch_logs_for_day.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -47,20 +49,60 @@ class _TodayPageState extends State<TodayPage> {
   List<WorkoutLog> _todayLogs = [];
   bool _isPickingSession = false;
 
+  /// All workout days (date-only) used for streak calculation.
+  Set<DateTime> _allWorkoutDays = const <DateTime>{};
+
+  /// All frozen days (date-only) used for streak calculation.
+  Set<DateTime> _frozenDays = const <DateTime>{};
+
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _logsSub;
   StreamSubscription<Either<Failure, Set<DateTime>>>? _frozenSub;
+  StreamSubscription<List<WorkoutLogModel>>? _allLogsSub;
+
+  /// Consecutive days ending today (or yesterday if today not yet
+  /// worked out). A frozen day counts as a passing day so intentional
+  /// rest days don't reset the streak. Returns 0 if there's no recent
+  /// activity on either side.
+  ///
+  /// Mirrors the algorithm used in `StreakPage` and the drawer's
+  /// progress badge so the number surfaced on the Today card stays
+  /// consistent with those surfaces.
+  static int _computeStreak(
+    Set<DateTime> workoutDays,
+    Set<DateTime> frozenDays,
+    DateTime now,
+  ) {
+    final passing = <DateTime>{...workoutDays, ...frozenDays};
+    if (passing.isEmpty) return 0;
+    final today = DateTime(now.year, now.month, now.day);
+    DateTime cursor = today;
+    int streak = 0;
+    // If today isn't a passing day, start counting from yesterday so
+    // the streak doesn't visually reset before the day ends.
+    if (!passing.contains(cursor)) {
+      cursor = cursor.subtract(const Duration(days: 1));
+      if (!passing.contains(cursor)) return 0;
+    }
+    while (passing.contains(cursor)) {
+      streak += 1;
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    return streak;
+  }
 
   @override
   void initState() {
     super.initState();
     _subscribeToLogs();
     _watchFrozen();
+    _subscribeToAllLogs();
   }
 
   @override
   void dispose() {
     _logsSub?.cancel();
     _frozenSub?.cancel();
+    _allLogsSub?.cancel();
     super.dispose();
   }
 
@@ -89,15 +131,46 @@ class _TodayPageState extends State<TodayPage> {
         if (frozenToday != _isTodayFrozen) {
           setState(() {
             _isTodayFrozen = frozenToday;
+            _frozenDays = frozen;
+          });
+        } else if (frozen.length != _frozenDays.length) {
+          // Streak counter depends on the full frozen set, so refresh
+          // when membership changes even if "today" status is stable.
+          setState(() {
+            _frozenDays = frozen;
           });
         }
       });
     });
   }
 
+  /// Streams every workout log in the user's history. Used only for
+  /// the streak counter — the today-only stream above drives the rest
+  /// of the page.
+  void _subscribeToAllLogs() {
+    _allLogsSub?.cancel();
+    _allLogsSub = getIt<WorkoutLogDao>().watchAllLogs().listen((logs) {
+      if (!mounted) return;
+      final days = <DateTime>{
+        for (final log in logs)
+          DateTime(
+            log.performedAt.year,
+            log.performedAt.month,
+            log.performedAt.day,
+          ),
+      };
+      setState(() {
+        _allWorkoutDays = days;
+      });
+    });
+  }
+
   void _onAddMoreSession(int sessionId) {
-    setState(() => _isPickingSession = false);
-    // Fix 4: Navigate to session details with workout selection mode enabled.
+    // Keep `_isPickingSession` true while the session-details page sits
+    // on top so the navigator stack behaves symmetrically: picking a
+    // session pushes session-details, backing out returns to the picker,
+    // and backing out again returns to the plain Today view. Flipping
+    // the flag here used to skip the picker on the way back.
     context.pushNamed(
       RouteNames.sessionDetails,
       pathParameters: {'id': sessionId.toString()},
@@ -167,6 +240,12 @@ class _TodayPageState extends State<TodayPage> {
                           dateLabel: dateLabel,
                           sessionCount: _todayLogs.length,
                           gradient: AppTheme.heroGradient,
+                          streakDays: _computeStreak(
+                            _allWorkoutDays,
+                            _frozenDays,
+                            now,
+                          ),
+                          workedOutToday: _todayLogs.isNotEmpty,
                         ),
                       ),
                       if (_todayLogs.isEmpty)
@@ -298,12 +377,23 @@ class _TodayHero extends StatelessWidget {
     required this.dateLabel,
     required this.sessionCount,
     required this.gradient,
+    required this.streakDays,
+    required this.workedOutToday,
   });
 
   final String dayName;
   final String dateLabel;
   final int sessionCount;
   final Gradient gradient;
+
+  /// Current consecutive-day workout streak. Zero when the user has no
+  /// recent activity. The Today card shows nothing in that case.
+  final int streakDays;
+
+  /// True when the user has completed at least one workout today. When
+  /// false but [streakDays] is positive, the card displays a
+  /// "keep it going" message instead of "current streak".
+  final bool workedOutToday;
 
   @override
   Widget build(BuildContext context) {
@@ -327,6 +417,7 @@ class _TodayHero extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -352,37 +443,58 @@ class _TodayHero extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              if (sessionCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: AppSpacing.xs,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.bolt_rounded,
-                        size: 14,
-                        color: theme.colorScheme.primary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$sessionCount session${sessionCount == 1 ? '' : 's'}',
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (streakDays > 0)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.local_fire_department_rounded,
+                          size: 16,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Current Streak: $streakDays ${_pluralDays(streakDays)}',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.2,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (streakDays > 0 && !workedOutToday)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        'Turn it into ${streakDays + 1} today!',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.w800,
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontWeight: FontWeight.w700,
                           fontSize: 11,
                           letterSpacing: 0.2,
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                    ),
+                  if (streakDays > 0 && sessionCount > 0)
+                    const SizedBox(height: AppSpacing.xs),
+                  if (sessionCount > 0)
+                    _WhitePill(
+                      icon: Icons.bolt_rounded,
+                      iconColor: theme.colorScheme.primary,
+                      text:
+                          '$sessionCount session${sessionCount == 1 ? '' : 's'}',
+                    ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: AppSpacing.md),
@@ -409,6 +521,57 @@ class _TodayHero extends StatelessWidget {
     );
   }
 }
+
+/// White pill with leading icon + text, used inside the Today hero for
+/// the streak and session-count chips. Both share the same shape and
+/// typography so this widget exists once and is reused.
+class _WhitePill extends StatelessWidget {
+  const _WhitePill({
+    required this.icon,
+    required this.iconColor,
+    required this.text,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: iconColor),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              text,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+                fontSize: 11,
+                letterSpacing: 0.2,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _pluralDays(int n) => 'Day${n == 1 ? '' : 's'}';
 
 class _SessionSection extends StatelessWidget {
   const _SessionSection({
@@ -659,7 +822,7 @@ class _SessionPicker extends StatelessWidget {
       );
     }
 
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

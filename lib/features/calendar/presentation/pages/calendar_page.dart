@@ -113,6 +113,7 @@ class _CalendarPageState extends State<CalendarPage> {
                               e.key.month == _visibleMonth.month,
                         )
                         .fold<int>(0, (sum, e) => sum + e.value),
+                    workoutsByDay: state.workoutsByDay,
                     onTap: _pickMonth,
                   ),
                   Padding(
@@ -155,12 +156,34 @@ class _CalendarHero extends StatelessWidget {
   const _CalendarHero({
     required this.month,
     required this.workoutsThisMonth,
+    required this.workoutsByDay,
     required this.onTap,
   });
 
   final DateTime month;
   final int workoutsThisMonth;
+  final Map<DateTime, int> workoutsByDay;
   final VoidCallback onTap;
+
+  /// Number of distinct days in the current calendar week (Sunday →
+  /// Saturday, matching the grid column order) that have at least one
+  /// completed workout. Matches what the grid renders as a dot, so
+  /// the hero metric stays in sync with what the user sees below it.
+  int get workoutsThisWeek {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(Duration(days: today.weekday % 7));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+    var days = 0;
+    for (final entry in workoutsByDay.entries) {
+      if (!entry.key.isBefore(weekStart) &&
+          entry.key.isBefore(weekEnd) &&
+          entry.value > 0) {
+        days += 1;
+      }
+    }
+    return days;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -287,8 +310,7 @@ class _CalendarHero extends StatelessWidget {
                     Expanded(
                       child: _HeroMetric(
                         icon: Icons.event_available_rounded,
-                        value:
-                            '${workoutsThisMonth == 0 ? 0 : (workoutsThisMonth / 30 * 7).round()}',
+                        value: '$workoutsThisWeek',
                         label: 'THIS WEEK',
                       ),
                     ),
