@@ -30,6 +30,7 @@ class DailyDetailsLoaded extends DailyDetailsState {
     required this.groups,
     required this.workoutsById,
     required this.sessionsById,
+    required this.isFrozen,
   });
 
   final DateTime date;
@@ -37,30 +38,38 @@ class DailyDetailsLoaded extends DailyDetailsState {
   final Map<int, Workout> workoutsById;
   final Map<int, Session> sessionsById;
 
+  /// Whether the selected date is marked as a freeze/rest day.
+  final bool isFrozen;
+
   DailyDetailsLoaded copyWith({
     DateTime? date,
     List<DailyLogGroup>? groups,
     Map<int, Workout>? workoutsById,
     Map<int, Session>? sessionsById,
+    bool? isFrozen,
   }) {
     return DailyDetailsLoaded(
       date: date ?? this.date,
       groups: groups ?? this.groups,
       workoutsById: workoutsById ?? this.workoutsById,
       sessionsById: sessionsById ?? this.sessionsById,
+      isFrozen: isFrozen ?? this.isFrozen,
     );
   }
 
   @override
-  List<Object?> get props => [date, groups, workoutsById, sessionsById];
+  List<Object?> get props => [date, groups, workoutsById, sessionsById, isFrozen];
 }
 
 class DailyDetailsEmpty extends DailyDetailsState {
-  const DailyDetailsEmpty({required this.date});
+  const DailyDetailsEmpty({required this.date, this.isFrozen = false});
   final DateTime date;
 
+  /// Whether the selected date is marked as a freeze/rest day.
+  final bool isFrozen;
+
   @override
-  List<Object?> get props => [date];
+  List<Object?> get props => [date, isFrozen];
 }
 
 class DailyDetailsError extends DailyDetailsState {

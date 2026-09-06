@@ -55,6 +55,14 @@ class SessionsReceivedEvent extends DailyDetailsEvent {
   List<Object?> get props => [sessionsById];
 }
 
+class FrozenDaysReceivedEvent extends DailyDetailsEvent {
+  const FrozenDaysReceivedEvent(this.frozenDays);
+  final Set<DateTime> frozenDays;
+
+  @override
+  List<Object?> get props => [frozenDays];
+}
+
 class DetailsErrorEvent extends DailyDetailsEvent {
   const DetailsErrorEvent(this.failure);
   final Failure failure;

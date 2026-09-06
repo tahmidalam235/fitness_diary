@@ -316,6 +316,7 @@ extension InjectionConfig on GetIt {
       () => CalendarBloc(
         watchLogsInRange: getIt(),
         workoutLogDao: getIt(),
+        watchFrozenDays: getIt(),
       ),
     );
     registerFactory<DailyDetailsBloc>(
@@ -324,6 +325,7 @@ extension InjectionConfig on GetIt {
         watchEntriesByLogForDay: getIt(),
         getWorkoutsByIds: getIt(),
         getSessionsByIds: getIt(),
+        watchFrozenDays: getIt(),
       ),
     );
   }

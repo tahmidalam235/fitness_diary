@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/error/failure.dart';
+import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
 import '../../../history/domain/entities/daily_log_group.dart';
 import '../../../history/domain/usecases/get_workouts_by_ids.dart';
 import '../../../history/domain/usecases/watch_entries_by_log_for_day.dart';
+import '../../../history/domain/usecases/watch_frozen_days.dart';
 import '../../../history/domain/usecases/watch_logs_for_day.dart';
 import '../../../session/domain/entities/session.dart';
 import '../../../session/domain/usecases/get_sessions_by_ids.dart';
@@ -25,16 +27,19 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     required WatchEntriesByLogForDay watchEntriesByLogForDay,
     required GetWorkoutsByIds getWorkoutsByIds,
     required GetSessionsByIds getSessionsByIds,
+    WatchFrozenDays? watchFrozenDays,
   }) : _watchLogsForDay = watchLogsForDay,
        _watchEntriesByLogForDay = watchEntriesByLogForDay,
        _getWorkoutsByIds = getWorkoutsByIds,
        _getSessionsByIds = getSessionsByIds,
+       _watchFrozenDays = watchFrozenDays,
        super(const DailyDetailsInitial()) {
     on<DaySelectedEvent>(_onDaySelected);
     on<LogsReceivedEvent>(_onLogsReceived);
     on<EntriesReceivedEvent>(_onEntriesReceived);
     on<WorkoutsReceivedEvent>(_onWorkoutsReceived);
     on<SessionsReceivedEvent>(_onSessionsReceived);
+    on<FrozenDaysReceivedEvent>(_onFrozenDaysReceived);
     on<DetailsErrorEvent>(_onError);
   }
 
@@ -42,10 +47,12 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
   final WatchEntriesByLogForDay _watchEntriesByLogForDay;
   final GetWorkoutsByIds _getWorkoutsByIds;
   final GetSessionsByIds _getSessionsByIds;
+  final WatchFrozenDays? _watchFrozenDays;
 
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _logsSub;
   StreamSubscription<Either<Failure, Map<int, List<WorkoutLogEntry>>>>?
   _entriesSub;
+  StreamSubscription<Either<Failure, Set<DateTime>>>? _frozenSub;
   DateTime? _activeDate;
 
   /// Latest snapshot of all four data sources keyed by date.
@@ -53,6 +60,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
   Map<int, List<WorkoutLogEntry>> _entriesByLog = const {};
   Map<int, Workout> _workoutsById = const {};
   Map<int, Session> _sessionsById = const {};
+  Set<DateTime> _frozenDays = const <DateTime>{};
   bool _gotLogs = false;
   bool _gotEntries = false;
 
@@ -67,6 +75,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     _entriesByLog = const {};
     _workoutsById = const {};
     _sessionsById = const {};
+    _frozenDays = const <DateTime>{};
     _gotLogs = false;
     _gotEntries = false;
     _requestedWorkoutIds.clear();
@@ -74,8 +83,10 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
 
     await _logsSub?.cancel();
     await _entriesSub?.cancel();
+    await _frozenSub?.cancel();
     _logsSub = null;
     _entriesSub = null;
+    _frozenSub = null;
 
     emit(DailyDetailsLoading(date: day));
 
@@ -94,6 +105,16 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
         (entries) => add(EntriesReceivedEvent(entries)),
       );
     });
+
+    // Subscribe to the full frozen-days set so the details page can
+    // tell whether the selected date is a freeze/rest day.
+    final frozenDays = _watchFrozenDays;
+    if (frozenDays != null) {
+      _frozenSub = frozenDays(const NoParams()).listen((result) {
+        if (isClosed) return;
+        result.fold((_) {}, (days) => add(FrozenDaysReceivedEvent(days)));
+      });
+    }
   }
 
   Future<void> _onLogsReceived(
@@ -129,6 +150,14 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     Emitter<DailyDetailsState> emit,
   ) {
     _sessionsById = {..._sessionsById, ...event.sessionsById};
+    _emitCurrent(emit);
+  }
+
+  void _onFrozenDaysReceived(
+    FrozenDaysReceivedEvent event,
+    Emitter<DailyDetailsState> emit,
+  ) {
+    _frozenDays = event.frozenDays;
     _emitCurrent(emit);
   }
 
@@ -187,8 +216,10 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
     // empty state before the other stream has a chance to populate data.
     if (!_gotLogs || !_gotEntries) return;
 
+    final isFrozen = _frozenDays.contains(date);
+
     if (_logs.isEmpty && _entriesByLog.isEmpty) {
-      emit(DailyDetailsEmpty(date: date));
+      emit(DailyDetailsEmpty(date: date, isFrozen: isFrozen));
       return;
     }
 
@@ -204,6 +235,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
         groups: groups,
         workoutsById: _workoutsById,
         sessionsById: _sessionsById,
+        isFrozen: isFrozen,
       ),
     );
   }
@@ -212,6 +244,7 @@ class DailyDetailsBloc extends Bloc<DailyDetailsEvent, DailyDetailsState> {
   Future<void> close() async {
     await _logsSub?.cancel();
     await _entriesSub?.cancel();
+    await _frozenSub?.cancel();
     return super.close();
   }
 }

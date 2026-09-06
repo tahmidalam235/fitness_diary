@@ -12,12 +12,17 @@ sealed class CalendarEvent extends Equatable {
 /// Internal: emitted by the stream listener when a new batch of logs is
 /// received from the database.
 class LogsReceivedEvent extends CalendarEvent {
-  const LogsReceivedEvent(this.daysWithLogs, this.workoutsByDay);
+  const LogsReceivedEvent(
+    this.daysWithLogs,
+    this.workoutsByDay,
+    this.frozenDays,
+  );
   final Set<DateTime> daysWithLogs;
   final Map<DateTime, int> workoutsByDay;
+  final Set<DateTime> frozenDays;
 
   @override
-  List<Object?> get props => [daysWithLogs, workoutsByDay];
+  List<Object?> get props => [daysWithLogs, workoutsByDay, frozenDays];
 }
 
 /// Internal: emitted when the watched stream returns a [Failure].

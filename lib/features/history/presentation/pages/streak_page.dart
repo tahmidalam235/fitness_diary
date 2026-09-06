@@ -58,28 +58,39 @@ class _StreakPageState extends State<StreakPage> {
     });
   }
 
-  /// Consecutive days ending today (or yesterday if today not yet
-  /// worked out). A frozen day counts as a passing day so intentional
-  /// rest days don't reset the streak. Returns 0 if there's no recent
-  /// activity on either side.
+  /// Consecutive workout days ending today (or yesterday if today has
+  /// neither a workout nor a freeze). A frozen-only day **preserves**
+  /// the previous streak without incrementing it — freezing today
+  /// does not turn an 8-day streak into 9. Frozen days also act as
+  /// bridges between workout days, so a streak doesn't break when a
+  /// frozen day sits between the previous workout and today.
   int _computeStreak(
     Set<DateTime> workoutDays,
     Set<DateTime> frozenDays,
     DateTime now,
   ) {
-    final passing = <DateTime>{...workoutDays, ...frozenDays};
-    if (passing.isEmpty) return 0;
     final today = DateTime(now.year, now.month, now.day);
     DateTime cursor = today;
     int streak = 0;
-    // If today isn't a passing day, start counting from yesterday so
-    // the streak doesn't visually reset before the day ends.
-    if (!passing.contains(cursor)) {
+    // Skip today without breaking the streak if it's frozen-only
+    // (no workout). The freeze protects the existing streak length
+    // without counting as a new day.
+    if (!workoutDays.contains(cursor) && frozenDays.contains(cursor)) {
       cursor = cursor.subtract(const Duration(days: 1));
-      if (!passing.contains(cursor)) return 0;
     }
-    while (passing.contains(cursor)) {
-      streak += 1;
+    // If today isn't a workout day and isn't frozen either, start
+    // counting from yesterday so the streak doesn't visually reset
+    // before the day ends.
+    if (!workoutDays.contains(cursor) && !frozenDays.contains(cursor)) {
+      cursor = cursor.subtract(const Duration(days: 1));
+    }
+    // Walk backwards, counting workout days and letting frozen days
+    // bridge gaps without incrementing the streak. The streak ends
+    // at the first day that is neither a workout nor a freeze.
+    while (workoutDays.contains(cursor) || frozenDays.contains(cursor)) {
+      if (workoutDays.contains(cursor)) {
+        streak += 1;
+      }
       cursor = cursor.subtract(const Duration(days: 1));
     }
     return streak;

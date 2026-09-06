@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../core/error/failure.dart';
+import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
+import '../../../history/domain/usecases/watch_frozen_days.dart';
 import '../../../history/domain/usecases/watch_logs_in_range.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/data/models/workout_log_entry_model.dart';
@@ -23,8 +25,10 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
   CalendarBloc({
     required WatchLogsInRange watchLogsInRange,
     required WorkoutLogDao workoutLogDao,
+    WatchFrozenDays? watchFrozenDays,
   }) : _watchLogsInRange = watchLogsInRange,
        _workoutLogDao = workoutLogDao,
+       _watchFrozenDays = watchFrozenDays,
        super(const CalendarLoading()) {
     on<LogsReceivedEvent>(_onLogsReceived);
     on<CalendarErrorEvent>(_onCalendarError);
@@ -58,15 +62,32 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
       _latestEntries = entries;
       _recomputeAndEmit();
     });
+
+    // Stream frozen/rest days so each calendar cell can render the
+    // frozen dates with a distinct blueish appearance and the daily
+    // details page can show freeze status when opened on such a date.
+    final frozenDays = _watchFrozenDays;
+    if (frozenDays != null) {
+      _frozenSub = frozenDays(const NoParams()).listen((result) {
+        if (isClosed) return;
+        result.fold((_) {}, (days) {
+          _latestFrozen = days;
+          _recomputeAndEmit();
+        });
+      });
+    }
   }
 
   final WatchLogsInRange _watchLogsInRange;
   final WorkoutLogDao _workoutLogDao;
+  final WatchFrozenDays? _watchFrozenDays;
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _sub;
   StreamSubscription<List<WorkoutLogEntryModel>>? _entriesSub;
+  StreamSubscription<Either<Failure, Set<DateTime>>>? _frozenSub;
 
   List<WorkoutLog> _latestLogs = const [];
   List<WorkoutLogEntryModel> _latestEntries = const [];
+  Set<DateTime> _latestFrozen = const <DateTime>{};
 
   /// Rebuilds the [CalendarLoaded] state from the latest snapshot of
   /// logs + entries. Idempotent and safe to call from either stream
@@ -104,14 +125,16 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
     final next = CalendarLoaded(
       daysWithLogs: days,
       workoutsByDay: counts,
+      frozenDays: _latestFrozen,
     );
     final prev = state;
     if (prev is CalendarLoaded &&
         _mapEquals(prev.workoutsByDay, next.workoutsByDay) &&
-        _setEquals(prev.daysWithLogs, next.daysWithLogs)) {
+        _setEquals(prev.daysWithLogs, next.daysWithLogs) &&
+        _setEquals(prev.frozenDays, next.frozenDays)) {
       return;
     }
-    add(LogsReceivedEvent(next.daysWithLogs, next.workoutsByDay));
+    add(LogsReceivedEvent(next.daysWithLogs, next.workoutsByDay, next.frozenDays));
   }
 
   bool _mapEquals(Map<DateTime, int> a, Map<DateTime, int> b) {
@@ -135,6 +158,7 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
       CalendarLoaded(
         daysWithLogs: event.daysWithLogs,
         workoutsByDay: event.workoutsByDay,
+        frozenDays: event.frozenDays,
       ),
     );
   }
@@ -147,6 +171,7 @@ class CalendarBloc extends Bloc<CalendarEvent, CalendarState> {
   Future<void> close() async {
     await _sub?.cancel();
     await _entriesSub?.cancel();
+    await _frozenSub?.cancel();
     return super.close();
   }
 }

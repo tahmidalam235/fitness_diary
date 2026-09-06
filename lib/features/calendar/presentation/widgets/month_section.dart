@@ -19,6 +19,7 @@ class MonthSection extends StatelessWidget {
     required this.daysWithLogs,
     required this.workoutsByDay,
     required this.onTapDay,
+    this.frozenDays = const <DateTime>{},
     this.sectionKey,
     super.key,
   });
@@ -34,6 +35,11 @@ class MonthSection extends StatelessWidget {
 
   /// Called when a day inside [month] is tapped.
   final ValueChanged<DateTime> onTapDay;
+
+  /// Set of date-only values that are marked as a freeze/rest day.
+  /// Frozen dates render with a subtle blueish appearance in the
+  /// grid so users can spot them at a glance.
+  final Set<DateTime> frozenDays;
 
   /// Optional key attached to the section's outer widget so the page
   /// can use [Scrollable.ensureVisible] to scroll to a specific month
@@ -138,6 +144,7 @@ class MonthSection extends StatelessWidget {
                 isToday: dOnly == todayOnly,
                 workoutCount: workoutsByDay[dOnly] ?? 0,
                 onTap: () => onTapDay(d),
+                isFrozen: frozenDays.contains(dOnly),
               );
             },
           ),

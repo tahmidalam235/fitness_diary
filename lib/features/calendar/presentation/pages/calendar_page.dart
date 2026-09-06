@@ -123,7 +123,13 @@ class _CalendarPageState extends State<CalendarPage> {
                       AppSpacing.lg,
                       AppSpacing.xs,
                     ),
-                    child: _LegendChip(label: l10n.calendarLegendCompleted),
+                    child: Row(
+                      children: [
+                        _LegendChip(label: l10n.calendarLegendCompleted),
+                        const SizedBox(width: AppSpacing.sm),
+                        const _FreezeLegendChip(),
+                      ],
+                    ),
                   ),
                   Expanded(
                     child: SingleChildScrollView(
@@ -132,6 +138,7 @@ class _CalendarPageState extends State<CalendarPage> {
                         month: _visibleMonth,
                         daysWithLogs: state.daysWithLogs,
                         workoutsByDay: state.workoutsByDay,
+                        frozenDays: state.frozenDays,
                         onTapDay: (d) => context.pushNamed(
                           RouteNames.calendarDay,
                           pathParameters: {'date': _formatDayParam(d)},
@@ -424,6 +431,50 @@ class _LegendChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Legend chip for the freeze/rest-day indicator so users can identify
+/// the blueish swatches in the calendar grid at a glance.
+class _FreezeLegendChip extends StatelessWidget {
+  const _FreezeLegendChip();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: AppTheme.frostBlue.withValues(alpha: 0.6),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            'Freeze / Rest Day',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              fontSize: 11,
+            ),
+          ),
+        ],
       ),
     );
   }

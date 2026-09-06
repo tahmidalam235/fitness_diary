@@ -158,20 +158,25 @@ class DailyDetailsPage extends StatelessWidget {
                     );
                   }
                   if (state is DailyDetailsEmpty) {
-                    return AppEmptyState(
-                      title: l10n.dailyDetailsEmptyTitle,
-                      message: l10n.dailyDetailsEmptyMessage,
-                      icon: Icons.event_busy_rounded,
+                    return ListView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.lg,
+                        AppSpacing.sm,
+                        AppSpacing.lg,
+                        AppSpacing.xxl,
+                      ),
+                      children: [
+                        if (state.isFrozen) const _FreezeRestCard(),
+                        const SizedBox(height: AppSpacing.md),
+                        AppEmptyState(
+                          title: l10n.dailyDetailsEmptyTitle,
+                          message: l10n.dailyDetailsEmptyMessage,
+                          icon: Icons.event_busy_rounded,
+                        ),
+                      ],
                     );
                   }
                   if (state is DailyDetailsLoaded) {
-                    if (state.groups.isEmpty) {
-                      return AppEmptyState(
-                        title: l10n.dailyDetailsEmptyTitle,
-                        message: l10n.dailyDetailsEmptyMessage,
-                        icon: Icons.event_busy_rounded,
-                      );
-                    }
                     return ListView.builder(
                       padding: const EdgeInsets.fromLTRB(
                         AppSpacing.lg,
@@ -179,9 +184,17 @@ class DailyDetailsPage extends StatelessWidget {
                         AppSpacing.lg,
                         AppSpacing.xxl,
                       ),
-                      itemCount: state.groups.length,
+                      itemCount:
+                          state.groups.length + (state.isFrozen ? 1 : 0),
                       itemBuilder: (context, index) {
-                        final group = state.groups[index];
+                        if (state.isFrozen && index == 0) {
+                          return const Padding(
+                            padding: EdgeInsets.only(bottom: AppSpacing.sm),
+                            child: _FreezeRestCard(),
+                          );
+                        }
+                        final groupIndex = state.isFrozen ? index - 1 : index;
+                        final group = state.groups[groupIndex];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                           child: DayLogCard(
@@ -199,6 +212,102 @@ class DailyDetailsPage extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Banner shown on a daily details page when the selected date is
+/// marked as a freeze/rest day. Uses the same blue palette as the
+/// calendar cell so the visual identity stays consistent.
+class _FreezeRestCard extends StatelessWidget {
+  const _FreezeRestCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.frostBlue.withValues(alpha: 0.18),
+            const Color(0xFF1E40AF).withValues(alpha: 0.12),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(
+          color: AppTheme.frostBlue.withValues(alpha: 0.4),
+          width: 1.2,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppTheme.frostBlue,
+                  Color(0xFF1E40AF),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.frostBlue.withValues(alpha: 0.4),
+                  blurRadius: 12,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: const Icon(
+              Icons.ac_unit_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'FREEZE / REST DAY',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.frostBlue,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.4,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'No workout logged',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Your streak is protected for this day.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

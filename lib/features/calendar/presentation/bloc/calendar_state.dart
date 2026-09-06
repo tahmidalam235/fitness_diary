@@ -21,6 +21,7 @@ class CalendarLoaded extends CalendarState {
   const CalendarLoaded({
     required this.daysWithLogs,
     required this.workoutsByDay,
+    required this.frozenDays,
   });
 
   /// Set of date-only values that have at least one completed log.
@@ -29,8 +30,11 @@ class CalendarLoaded extends CalendarState {
   /// Map of date → count of logs performed that day.
   final Map<DateTime, int> workoutsByDay;
 
+  /// Set of date-only values that are marked as a freeze/rest day.
+  final Set<DateTime> frozenDays;
+
   @override
-  List<Object?> get props => [daysWithLogs, workoutsByDay];
+  List<Object?> get props => [daysWithLogs, workoutsByDay, frozenDays];
 }
 
 class CalendarError extends CalendarState {

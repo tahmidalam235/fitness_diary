@@ -136,7 +136,7 @@ class _FreezePageState extends State<FreezePage> {
                   ),
                   const Gap(AppSpacing.sm),
                   Text(
-                    'LAST 30 DAYS',
+                    'NEXT 30 DAYS',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
@@ -285,10 +285,10 @@ class _FreezeHero extends StatelessWidget {
   }
 }
 
-/// Horizontal strip of upcoming 30 days starting from TOMORROW.
-/// Each cell is a tap-to-toggle chip. The month abbreviation of the
-/// first day in the strip is rendered above the chips so the user
-/// always sees which month the leftmost date belongs to.
+/// Horizontal strip of 30 days starting from TODAY. Each cell is a
+/// tap-to-toggle chip. The month abbreviation of the first day in the
+/// strip is rendered above the chips so the user always sees which
+/// month the leftmost date belongs to.
 class _FreezeStrip extends StatelessWidget {
   const _FreezeStrip({required this.frozen, required this.onToggle});
 
@@ -300,8 +300,8 @@ class _FreezeStrip extends StatelessWidget {
     final theme = Theme.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    // 30 days starting from TOMORROW (today + 1) through today + 30.
-    final firstDay = today.add(const Duration(days: 1));
+    // 30 days starting from TODAY through today + 29.
+    final firstDay = today;
     final days = List<DateTime>.generate(
       30,
       (i) => firstDay.add(Duration(days: i)),
