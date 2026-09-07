@@ -15,6 +15,7 @@ import '../../features/history/domain/repositories/history_repository.dart';
 import '../../features/history/domain/usecases/get_workouts_by_ids.dart';
 import '../../features/history/domain/usecases/set_day_frozen.dart';
 import '../../features/history/domain/usecases/watch_entries_by_log_for_day.dart';
+import '../../features/history/domain/usecases/watch_entries_in_range.dart';
 import '../../features/history/domain/usecases/watch_frozen_days.dart';
 import '../../features/history/domain/usecases/watch_logs_for_day.dart';
 import '../../features/history/domain/usecases/watch_logs_in_range.dart';
@@ -282,6 +283,9 @@ extension InjectionConfig on GetIt {
 
     registerLazySingleton<WatchLogsInRange>(
       () => WatchLogsInRange(repository: getIt()),
+    );
+    registerLazySingleton<WatchEntriesInRange>(
+      () => WatchEntriesInRange(repository: getIt()),
     );
     registerLazySingleton<WatchLogsForDay>(
       () => WatchLogsForDay(repository: getIt()),

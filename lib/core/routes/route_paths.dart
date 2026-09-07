@@ -39,6 +39,10 @@ class RoutePaths {
   static const String freeze = '/freeze';
   static const String historyOverview = '/history';
   static const String streak = '/streak';
+
+  // Muscle Training Analytics
+  static const String muscleAnalytics = '/history/muscle-analytics';
+  static const String muscleAnalyticsDetail = 'body-part/:part';
 }
 
 /// Named-route identifiers used with `context.goNamed(...)`.
@@ -68,4 +72,8 @@ class RouteNames {
   static const String freeze = 'freeze';
   static const String historyOverview = 'historyOverview';
   static const String streak = 'streak';
+
+  // Muscle Training Analytics
+  static const String muscleAnalytics = 'muscleAnalytics';
+  static const String muscleAnalyticsDetail = 'muscleAnalyticsDetail';
 }

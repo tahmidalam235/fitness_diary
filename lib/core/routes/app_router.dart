@@ -12,6 +12,8 @@ import '../../features/history/presentation/pages/history_compare_page.dart';
 import '../../features/history/presentation/pages/history_overview_page.dart';
 import '../../features/history/presentation/pages/history_period_page.dart';
 import '../../features/history/presentation/pages/streak_page.dart';
+import '../../features/history/presentation/pages/muscle_training_analytics_page.dart';
+import '../../features/history/presentation/pages/muscle_body_part_detail_page.dart';
 import '../../features/profile/presentation/pages/profile_page.dart';
 import '../../features/session/presentation/pages/session_details_page.dart';
 import '../../features/session/presentation/pages/session_form_page.dart';
@@ -95,6 +97,25 @@ final GoRouter appRouter = GoRouter(
       path: RoutePaths.streak,
       name: RouteNames.streak,
       builder: (_, _) => const StreakPage(),
+    ),
+    GoRoute(
+      path: RoutePaths.muscleAnalytics,
+      name: RouteNames.muscleAnalytics,
+      builder: (_, _) => const MuscleTrainingAnalyticsPage(),
+      routes: [
+        GoRoute(
+          path: RoutePaths.muscleAnalyticsDetail,
+          name: RouteNames.muscleAnalyticsDetail,
+          builder: (_, state) {
+            final raw = state.pathParameters['part'] ?? '';
+            final period = state.uri.queryParameters['period'] ?? 'week';
+            return MuscleBodyPartDetailPage(
+              bodyPartId: raw,
+              period: period,
+            );
+          },
+        ),
+      ],
     ),
     GoRoute(
       path: RoutePaths.historyPeriod,

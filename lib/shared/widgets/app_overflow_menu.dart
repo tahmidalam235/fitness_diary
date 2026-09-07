@@ -170,6 +170,32 @@ class AppOverflowMenu extends StatelessWidget {
                 ],
               ),
             ),
+            PopupMenuItem<void>(
+              onTap: () => context.pushNamed(RouteNames.muscleAnalytics),
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.deepGradient,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.analytics_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  const Text(
+                    'Muscle Training Analytics',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+            ),
 
             const PopupMenuDivider(),
 
