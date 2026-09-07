@@ -493,6 +493,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get workoutActionReorder => 'Reorder';
 
   @override
+  String get workoutFilterByMuscle => 'Filter by muscle';
+
+  @override
+  String get workoutFilterAllMuscles => 'All muscles';
+
+  @override
+  String get workoutFilterClear => 'Clear filter';
+
+  @override
+  String workoutFilterEmptyForPart(String part) {
+    return 'No workouts target $part.';
+  }
+
+  @override
   String get routerErrorTitle => 'Page not found';
 
   @override

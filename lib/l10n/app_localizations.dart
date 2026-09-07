@@ -958,6 +958,30 @@ abstract class AppLocalizations {
   /// **'Reorder'**
   String get workoutActionReorder;
 
+  /// No description provided for @workoutFilterByMuscle.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter by muscle'**
+  String get workoutFilterByMuscle;
+
+  /// No description provided for @workoutFilterAllMuscles.
+  ///
+  /// In en, this message translates to:
+  /// **'All muscles'**
+  String get workoutFilterAllMuscles;
+
+  /// No description provided for @workoutFilterClear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filter'**
+  String get workoutFilterClear;
+
+  /// No description provided for @workoutFilterEmptyForPart.
+  ///
+  /// In en, this message translates to:
+  /// **'No workouts target {part}.'**
+  String workoutFilterEmptyForPart(String part);
+
   /// No description provided for @routerErrorTitle.
   ///
   /// In en, this message translates to:

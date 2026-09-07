@@ -245,6 +245,16 @@
   "workoutActionDelete": "Delete workout",
   "workoutActionReorder": "Reorder",
 
+  "workoutFilterByMuscle": "Filter by muscle",
+  "workoutFilterAllMuscles": "All muscles",
+  "workoutFilterClear": "Clear filter",
+  "workoutFilterEmptyForPart": "No workouts target {part}.",
+  "@workoutFilterEmptyForPart": {
+    "placeholders": {
+      "part": {"type": "String"}
+    }
+  },
+
   "routerErrorTitle": "Page not found",
   "routerErrorMessage": "The requested page does not exist.",
 

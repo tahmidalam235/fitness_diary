@@ -826,13 +826,16 @@ class _WorkoutListSection extends StatelessWidget {
                             onChanged: isTracked
                                 ? null
                                 : (_) => onToggleSelection(w.workoutId),
-                            materialTapTargetSize: MaterialTapTargetSize.padded,
+                            materialTapTargetSize:
+                                MaterialTapTargetSize.padded,
                           ),
                         ),
                       )
                     : null,
                 onTap: selectMode
-                    ? (isTracked ? () {} : () => onToggleSelection(w.workoutId))
+                    ? (isTracked
+                        ? () {}
+                        : () => onToggleSelection(w.workoutId))
                     : () => context.pushNamed(
                         RouteNames.workoutEdit,
                         pathParameters: {

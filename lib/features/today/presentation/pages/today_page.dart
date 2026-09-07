@@ -16,6 +16,7 @@ import '../../../../core/usecase/no_params.dart';
 import '../../../../core/utils/either.dart';
 import '../../../../core/database/daos/workout_log_dao.dart';
 import '../../../../features/history/domain/usecases/watch_frozen_days.dart';
+import '../../../../features/workout/domain/usecases/watch_workouts.dart';
 import '../../../../features/workout_log/data/models/workout_log_model.dart';
 import '../../../../features/history/domain/usecases/watch_logs_for_day.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -28,9 +29,13 @@ import '../../../session/domain/entities/session.dart';
 import '../../../session/presentation/bloc/session_bloc.dart';
 import '../../../session/presentation/bloc/session_event.dart';
 import '../../../session/presentation/bloc/session_state.dart';
+import '../../../workout/data/datasources/workout_local_datasource.dart';
 import '../../../workout/domain/entities/workout.dart';
+import '../../../workout/presentation/widgets/workout_filter_drawer.dart';
 import '../../../workout_log/domain/entities/workout_log.dart';
 import '../../../workout_log/domain/entities/workout_log_entry.dart';
+import '../../../workout_log/domain/usecases/add_workouts_to_today.dart';
+import '../../../workout_log/domain/usecases/get_last_entries_for_workouts.dart';
 import '../bloc/today_workouts_bloc.dart';
 
 /// The Today page displays every workout session assigned for today.
@@ -49,6 +54,12 @@ class _TodayPageState extends State<TodayPage> {
   List<WorkoutLog> _todayLogs = [];
   bool _isPickingSession = false;
 
+  /// Cached snapshot of every workout across every existing session.
+  /// Driven the Add Session picker's filter drawer — the drawer needs
+  /// the full set so it can group by parent muscle → specific muscle
+  /// → matching workout name.
+  List<Workout> _allWorkouts = const <Workout>[];
+
   /// All workout days (date-only) used for streak calculation.
   Set<DateTime> _allWorkoutDays = const <DateTime>{};
 
@@ -58,6 +69,7 @@ class _TodayPageState extends State<TodayPage> {
   StreamSubscription<Either<Failure, List<WorkoutLog>>>? _logsSub;
   StreamSubscription<Either<Failure, Set<DateTime>>>? _frozenSub;
   StreamSubscription<List<WorkoutLogModel>>? _allLogsSub;
+  StreamSubscription<Either<Failure, List<Workout>>>? _allWorkoutsSub;
 
   /// Consecutive workout days ending today (or yesterday if today has
   /// neither a workout nor a freeze). A frozen-only day **preserves**
@@ -107,6 +119,7 @@ class _TodayPageState extends State<TodayPage> {
     _subscribeToLogs();
     _watchFrozen();
     _subscribeToAllLogs();
+    _subscribeToAllWorkouts();
   }
 
   @override
@@ -114,6 +127,7 @@ class _TodayPageState extends State<TodayPage> {
     _logsSub?.cancel();
     _frozenSub?.cancel();
     _allLogsSub?.cancel();
+    _allWorkoutsSub?.cancel();
     super.dispose();
   }
 
@@ -176,6 +190,25 @@ class _TodayPageState extends State<TodayPage> {
     });
   }
 
+  /// Streams every workout across every existing session. Drives the
+  /// Add Session picker's hierarchical filter drawer — the drawer
+  /// groups and filters this list by parent muscle group → specific
+  /// body part → matching workout name. Only stored in state; the
+  /// Today page itself doesn't render anything from it.
+  void _subscribeToAllWorkouts() {
+    _allWorkoutsSub?.cancel();
+    _allWorkoutsSub = getIt<WatchAllWorkouts>()(const NoParams()).listen((
+      result,
+    ) {
+      if (!mounted) return;
+      result.fold((_) {}, (workouts) {
+        setState(() {
+          _allWorkouts = workouts;
+        });
+      });
+    });
+  }
+
   void _onAddMoreSession(int sessionId) {
     // Keep `_isPickingSession` true while the session-details page sits
     // on top so the navigator stack behaves symmetrically: picking a
@@ -186,6 +219,102 @@ class _TodayPageState extends State<TodayPage> {
       RouteNames.sessionDetails,
       pathParameters: {'id': sessionId.toString()},
       queryParameters: {'select': '1'},
+    );
+  }
+
+  Future<void> _openWorkoutFilter(
+    BuildContext context, {
+    required List<Workout> allWorkouts,
+    required Map<int, String> sessionNameById,
+  }) async {
+    final picked = await WorkoutFilterDrawer.show(
+      context,
+      allWorkouts: allWorkouts,
+      sessionNameById: sessionNameById,
+    );
+    if (picked == null || picked.isEmpty) return;
+    if (!mounted) return;
+    await _addFilteredWorkoutsForToday(picked);
+  }
+
+  /// Mirrors `SessionDetailsPage._addForToday` for workouts picked via
+  /// the filter drawer. Each workout is attributed to its own parent
+  /// session — the user stays on Today and the workout remains in
+  /// its original session untouched.
+  Future<void> _addFilteredWorkoutsForToday(List<Workout> picked) async {
+    if (picked.isEmpty) return;
+
+    // Resolves the master Firestore id from the int hash so the today
+    // page can rejoin entries to workout templates across snapshots.
+    final idMap = await getIt<WorkoutLocalDataSource>().getAllWorkoutIds();
+
+    final lastResult = await getIt<GetLastEntriesForWorkouts>()(
+      picked.map((w) => w.workoutId).toList(),
+    );
+    final priorByWorkout = lastResult.fold(
+      (failure) => const <int, WorkoutLogEntry>{},
+      (map) => map,
+    );
+
+    // Group by parent session so we emit one `AddWorkoutsToToday`
+    // call per session, mirroring the normal select-mode bulk-pick.
+    final entriesBySession = <int, List<WorkoutLogEntry>>{};
+    for (final w in picked) {
+      final prior = priorByWorkout[w.workoutId];
+      final entry = WorkoutLogEntry(
+        id: 0,
+        workoutLogId: 0, // overwritten by the repository
+        workoutId: w.workoutId,
+        setIndex: 1,
+        position: 0,
+        sets: prior?.sets ?? w.defaultSets,
+        reps: prior?.reps ?? w.defaultReps,
+        weight: prior?.weight ?? w.defaultWeight,
+        durationSeconds: prior?.durationSeconds ?? w.defaultDurationSeconds,
+        workoutFirestoreId: idMap[w.workoutId],
+      );
+      entriesBySession.putIfAbsent(w.sessionId, () => <WorkoutLogEntry>[]).add(entry);
+    }
+
+    var lastFailureMessage = '';
+    var anySuccess = false;
+    // Fan out across parent sessions — each call writes to a distinct
+    // WorkoutLog document so they're safe to run concurrently and
+    // bulk-add latency collapses from O(K × RTT) to O(RTT).
+    final results = await Future.wait(
+      entriesBySession.entries.map(
+        (entry) => getIt<AddWorkoutsToToday>()(
+          AddWorkoutsToTodayParams(
+            sessionId: entry.key,
+            entries: entry.value,
+          ),
+        ),
+      ),
+    );
+    for (final addResult in results) {
+      addResult.fold(
+        (failure) => lastFailureMessage = failure.message,
+        (_) => anySuccess = true,
+      );
+    }
+
+    if (!mounted) return;
+    if (!anySuccess && lastFailureMessage.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(lastFailureMessage)));
+      return;
+    }
+
+    setState(() => _isPickingSession = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          picked.length == 1
+              ? "Added to today's session"
+              : "Added ${picked.length} workouts to today's session",
+        ),
+      ),
     );
   }
 
@@ -205,6 +334,15 @@ class _TodayPageState extends State<TodayPage> {
       child: BlocBuilder<SessionBloc, SessionState>(
         builder: (context, state) {
           if (_isPickingSession && state is SessionLoaded) {
+            // Lookup from sessionId → name so the drawer's workout
+            // step can render "Push · Bench Press" instead of just
+            // "Bench Press" when the same workout name appears in
+            // multiple sessions. Only built when actually picking
+            // so we don't pay the cost on the regular Today render.
+            final sessionNameById = <int, String>{
+              for (final s in state.sessions)
+                if (s.id != null) s.id!: s.name,
+            };
             return PopScope(
               canPop: false,
               onPopInvokedWithResult: (didPop, _) {
@@ -217,6 +355,17 @@ class _TodayPageState extends State<TodayPage> {
                   icon: const Icon(Icons.arrow_back_rounded),
                   onPressed: () => setState(() => _isPickingSession = false),
                 ),
+                actions: [
+                  IconButton(
+                    tooltip: 'Filter workouts',
+                    icon: const Icon(Icons.filter_alt_rounded),
+                    onPressed: () => _openWorkoutFilter(
+                      context,
+                      allWorkouts: _allWorkouts,
+                      sessionNameById: sessionNameById,
+                    ),
+                  ),
+                ],
                 body: _SessionPicker(
                   sessions: state.sessions,
                   pickedId: null,
