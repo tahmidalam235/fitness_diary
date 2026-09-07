@@ -43,6 +43,9 @@ class RoutePaths {
   // Muscle Training Analytics
   static const String muscleAnalytics = '/history/muscle-analytics';
   static const String muscleAnalyticsDetail = 'body-part/:part';
+
+  // Suggestions
+  static const String suggestions = '/suggestions';
 }
 
 /// Named-route identifiers used with `context.goNamed(...)`.
@@ -76,4 +79,7 @@ class RouteNames {
   // Muscle Training Analytics
   static const String muscleAnalytics = 'muscleAnalytics';
   static const String muscleAnalyticsDetail = 'muscleAnalyticsDetail';
+
+  // Suggestions
+  static const String suggestions = 'suggestions';
 }

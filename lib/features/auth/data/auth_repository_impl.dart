@@ -109,6 +109,11 @@ class AuthRepositoryImpl implements AuthRepository {
           id: user.uid.hashCode,
           username: username.trim(),
           createdAt: DateTime.now(),
+          // Persist the exact email the user registered with so the
+          // Profile page can re-display it across cold starts and
+          // logout/login cycles, even if the local cache (used by
+          // ProfileService) is empty or stale.
+          email: email.trim(),
         ),
       );
     } on FirebaseAuthException catch (e) {
@@ -189,12 +194,20 @@ class AuthRepositoryImpl implements AuthRepository {
       // own metadata.creationTime (also set at account creation)
       // if the Firestore doc is missing for any reason.
       DateTime? createdAt;
+      String? registeredEmail;
       try {
         final userDoc =
             await _firestore.collection('users').doc(user.uid).get();
         final stored = userDoc.data()?['createdAt'];
         if (stored is Timestamp) {
           createdAt = stored.toDate();
+        }
+        // Pull the registered email from Firestore so subsequent
+        // re-logins show the same email the user typed at signup —
+        // never a synthesized, default, or locally-edited value.
+        final storedEmail = userDoc.data()?['email'];
+        if (storedEmail is String && storedEmail.trim().isNotEmpty) {
+          registeredEmail = storedEmail.trim();
         }
       } on FirebaseException catch (e) {
         debugPrint('login: Firestore lookup failed (${e.code})');
@@ -206,6 +219,7 @@ class AuthRepositoryImpl implements AuthRepository {
           id: user.uid.hashCode,
           username: username.trim(),
           createdAt: createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+          email: registeredEmail,
         ),
       );
     } on FirebaseAuthException catch (e) {
@@ -362,6 +376,7 @@ class AuthRepositoryImpl implements AuthRepository {
       // if the Firestore doc is missing for any reason.
       String username = '';
       DateTime? createdAt;
+      String? registeredEmail;
       try {
         final userDoc = await _firestore.collection('users').doc(user.uid).get();
         final data = userDoc.data();
@@ -374,6 +389,16 @@ class AuthRepositoryImpl implements AuthRepository {
           if (storedCreatedAt is Timestamp) {
             createdAt = storedCreatedAt.toDate();
           }
+          // Prefer the email that was originally written to the
+          // Firestore profile at signup. Falls back to Firebase
+          // Auth's own email (which for legacy accounts is the
+          // synthesized username@fitnessdiary.local form) only if
+          // the profile doc is missing — and even then we never
+          // surface the synthesized form as the user's email.
+          final storedEmail = data['email'];
+          if (storedEmail is String && storedEmail.trim().isNotEmpty) {
+            registeredEmail = storedEmail.trim();
+          }
         }
       } on FirebaseException catch (e) {
         // Permission / unavailable — fall through to metadata fallback.
@@ -384,12 +409,21 @@ class AuthRepositoryImpl implements AuthRepository {
           ? username
           : (user.email?.split('@').first ?? '');
       createdAt ??= user.metadata.creationTime;
+      // If the Firestore profile doc didn't carry an email (legacy
+      // account or write failure), don't fall back to the synthesized
+      // Firebase Auth email — leave it null so the Profile page
+      // doesn't display a derived value.
+      registeredEmail ??= (user.email != null &&
+              user.email!.endsWith('@fitnessdiary.local'))
+          ? null
+          : user.email;
 
       return Right(
         AuthUser(
           id: user.uid.hashCode,
           username: username,
           createdAt: createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+          email: registeredEmail,
         ),
       );
     } catch (e) {

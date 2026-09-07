@@ -9,6 +9,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/usecase/no_params.dart';
 import '../../features/history/domain/usecases/set_day_frozen.dart';
 import '../../features/history/domain/usecases/watch_frozen_days.dart';
+import '../../features/suggestions/data/suggestions_read_service.dart';
+import '../../features/suggestions/data/suggestions_repository.dart';
 import '../../l10n/app_localizations.dart';
 
 class AppOverflowMenu extends StatelessWidget {
@@ -19,6 +21,8 @@ class AppOverflowMenu extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final watchFrozen = getIt<WatchFrozenDays>();
     final setFrozen = getIt<SetDayFrozen>();
+    final suggestionsRepository = SuggestionsRepository();
+    final suggestionsRead = getIt<SuggestionsReadService>();
     final theme = Theme.of(context);
 
     return StreamBuilder<Set<DateTime>>(
@@ -170,6 +174,11 @@ class AppOverflowMenu extends StatelessWidget {
                 ],
               ),
             ),
+            _SuggestionsMenuItem.build(
+              context: context,
+              repository: suggestionsRepository,
+              readService: suggestionsRead,
+            ),
             PopupMenuItem<void>(
               onTap: () => context.pushNamed(RouteNames.muscleAnalytics),
               child: Row(
@@ -215,6 +224,71 @@ class AppOverflowMenu extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Builds the "Suggestions" menu entry. Returns a `PopupMenuItem`
+/// directly so it can sit in the existing `PopupMenuButton.itemBuilder`
+/// list without changing the list's declared element type.
+class _SuggestionsMenuItem {
+  const _SuggestionsMenuItem._();
+
+  static PopupMenuItem<void> build({
+    required BuildContext context,
+    required SuggestionsRepository repository,
+    required SuggestionsReadService readService,
+  }) {
+    return PopupMenuItem<void>(
+      onTap: () => context.pushNamed(RouteNames.suggestions),
+      child: StreamBuilder<List<SuggestedWorkout>>(
+        stream: repository.watchSuggestions(),
+        builder: (context, snap) {
+          final suggestions = snap.data ?? const <SuggestedWorkout>[];
+          return ListenableBuilder(
+            listenable: readService,
+            builder: (context, _) {
+              final unread = readService.hasUnread(
+                [for (final s in suggestions) s.lastPerformedAt],
+              );
+              return Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.freshGradient,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Icon(
+                      Icons.bolt_rounded,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  const Expanded(
+                    child: Text(
+                      'Suggestions',
+                      style: TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  if (unread)
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFEF4444),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                ],
+              );
+            },
+          );
+        },
+      ),
     );
   }
 }

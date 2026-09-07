@@ -34,6 +34,7 @@ import '../../features/session/presentation/bloc/session_bloc.dart';
 import '../../features/settings/data/notification_service.dart';
 import '../../features/settings/data/settings_service.dart';
 import '../../features/settings/data/theme_service.dart';
+import '../../features/suggestions/data/suggestions_read_service.dart';
 import '../../features/today/presentation/bloc/today_workouts_bloc.dart';
 import '../../features/workout/data/datasources/workout_local_datasource.dart';
 import '../../features/workout/data/repositories/workout_repository_impl.dart';
@@ -83,6 +84,7 @@ Future<void> setupInjection() async {
   getIt.registerTodayFeature();
   getIt.registerSettingsFeature();
   getIt.registerAuthFeature();
+  getIt.registerSuggestionsFeature();
 
   // Eagerly load persisted preferences + auth state before the UI
   // draws, ensuring the router redirect and theme selection work
@@ -92,6 +94,7 @@ Future<void> setupInjection() async {
   await getIt<ThemeService>().load();
   await getIt<ProfileService>().load();
   await getIt<NotificationService>().init();
+  await getIt<SuggestionsReadService>().load();
 
   // Best-effort re-arm: AlarmManager state may have been wiped externally
   // (force-stop, OEM battery saver, fresh Gmail install) between launches.
@@ -360,6 +363,12 @@ extension InjectionConfig on GetIt {
     );
     registerLazySingleton<ThemeService>(() => ThemeService());
     registerLazySingleton<NotificationService>(() => NotificationService());
+  }
+
+  void registerSuggestionsFeature() {
+    registerLazySingleton<SuggestionsReadService>(
+      () => SuggestionsReadService(),
+    );
   }
 
   /// Registers the cloud-sync layer. Must be called BEFORE any feature

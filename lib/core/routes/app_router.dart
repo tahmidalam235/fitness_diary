@@ -20,6 +20,7 @@ import '../../features/session/presentation/pages/session_form_page.dart';
 import '../../features/session/presentation/pages/sessions_page.dart';
 import '../../features/settings/presentation/pages/settings_page.dart';
 import '../../features/splash/presentation/pages/splash_page.dart';
+import '../../features/suggestions/presentation/pages/suggestions_page.dart';
 import '../../features/today/presentation/pages/today_page.dart';
 import '../../features/workout/presentation/pages/workout_form_page.dart';
 import '../../features/workout/presentation/pages/workouts_page.dart';
@@ -241,6 +242,11 @@ final GoRouter appRouter = GoRouter(
       path: RoutePaths.settings,
       name: RouteNames.settings,
       builder: (_, _) => const SettingsPage(),
+    ),
+    GoRoute(
+      path: RoutePaths.suggestions,
+      name: RouteNames.suggestions,
+      builder: (_, _) => const SuggestionsPage(),
     ),
   ],
   errorBuilder: (context, state) => _RouterErrorPage(error: state.error),

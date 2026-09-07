@@ -31,14 +31,23 @@ class AuthService extends ChangeNotifier {
 
   /// Reads the persisted session (if any) so the router knows the
   /// initial auth state before the user taps anything. Pulls the
-  /// full account profile — username and creation timestamp — from
-  /// the repository so the Profile screen reflects the values the
-  /// user registered with, even across cold starts.
+  /// full account profile — username, creation timestamp, and the
+  /// email the user originally registered with — from the repository
+  /// so the Profile screen reflects the values the user registered
+  /// with, even across cold starts and logout/login cycles.
   Future<void> load() async {
     if (_loaded) return;
     final sessionResult = await _repository.restoreSession();
     _currentUser = sessionResult.getOrElse((_) => null);
     _loaded = true;
+    // Mirror the registered email into ProfileService so the
+    // Profile page renders the exact signup email even when the
+    // SharedPreferences cache is empty (e.g. fresh install with a
+    // restored Firebase session, or a previous cache wipe).
+    final registered = _currentUser?.email;
+    if (registered != null && registered.isNotEmpty) {
+      _seedProfileEmail(registered);
+    }
     notifyListeners();
   }
 
@@ -75,6 +84,14 @@ class AuthService extends ChangeNotifier {
     );
     return result.fold((failure) => AuthResult.failure(failure), (user) async {
       _currentUser = user;
+      // Push the email the user registered with into ProfileService
+      // so the Profile page always shows the exact signup email —
+      // not a synthesized default from SharedPreferences — even
+      // after a logout/login cycle or a wiped local cache.
+      final registered = user.email;
+      if (registered != null && registered.isNotEmpty) {
+        _seedProfileEmail(registered);
+      }
       // Firestore is the source of truth — every page subscribes to
       // the relevant collection on first render, so the UI populates
       // from cloud without any explicit restore step.
@@ -116,6 +133,20 @@ class AuthService extends ChangeNotifier {
     try {
       final svc = _profileService ?? getIt<ProfileService>();
       svc.updateName(name);
+      svc.updateEmail(email);
+    } catch (_) {
+      // If ProfileService isn't registered yet, the next page that
+      // reads it will load from SharedPreferences directly.
+    }
+  }
+
+  /// Mirror just the registered email into [ProfileService] without
+  /// touching the display name. Used on login and cold-start session
+  /// restore so the Profile page always shows the email the user
+  /// typed at signup — even when the local cache is empty.
+  void _seedProfileEmail(String email) {
+    try {
+      final svc = _profileService ?? getIt<ProfileService>();
       svc.updateEmail(email);
     } catch (_) {
       // If ProfileService isn't registered yet, the next page that
